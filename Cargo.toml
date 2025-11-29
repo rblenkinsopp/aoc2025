@@ -1,0 +1,11 @@
+[package]
+name = "aoc2025"
+description = "Advent of Code 2025 in Rust"
+authors = ["Robert Blenkinsopp <robert@blenkinsopp.net>"]
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+[dev-dependencies]
+indoc = "2.0.7"

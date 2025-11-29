@@ -1,0 +1,3 @@
+[submodule "data"]
+	path = data
+	url = git@github.com:rblenkinsopp/aoc2025-data.git

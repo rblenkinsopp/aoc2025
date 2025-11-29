@@ -1,0 +1,19 @@
+version: 1
+author: XenoPhoenix
+language: Rust
+image: rustlang/rust:nightly-alpine
+code: /code
+workdir: /code
+cmd: "./target/release/day%zeroday% %input%"
+runonce: "apk add musl-dev && cargo build --release --bin day%zeroday%"
+persistence:
+  - /usr/local/cargo/registry
+  - /var/cache/apk
+environment: []
+daypath: "src/bin/day%zeroday%.rs"
+inputfile: "data/inputs/day%zeroday%.txt"
+answerfile: "data/answers/day%zeroday%.txt"
+common:
+  - Cargo.lock
+  - Cargo.toml
+  - src/lib.rs

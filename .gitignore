@@ -1,0 +1,9 @@
+# Rust
+debug/
+target/
+*.pdb
+**/*.rs.bk
+**/mutants.out*/
+
+# Rust Rover
+.idea/*
