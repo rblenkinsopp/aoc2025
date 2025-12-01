@@ -1,5 +1,4 @@
 use aoc2025::get_input_as_string;
-use atoi::atoi;
 
 const DIAL_POSITION_START: i32 = 50;
 const DIAL_POSITION_COUNT: i32 = 100;
@@ -27,21 +26,32 @@ fn rotate_dial(position: i32, rotation: i32) -> (i32, i32) {
 }
 
 #[inline(always)]
+fn parse_rotation(bytes: &[u8]) -> i32 {
+    let sign = ((bytes[0] == b'R') as i32) * 2 - 1;
+    sign * match bytes.len() {
+        2 => (bytes[1] - b'0') as i32,
+        3 => ((bytes[1] - b'0') as i32) * 10 + (bytes[2] - b'0') as i32,
+        4 => {
+            ((bytes[1] - b'0') as i32) * 100
+                + ((bytes[2] - b'0') as i32) * 10
+                + (bytes[3] - b'0') as i32
+        }
+        _ => panic!("Rotation magnitude is > 3 digits"),
+    }
+}
+
+#[inline(always)]
 fn day1(input: &str) -> (i32, i32) {
     let mut position = DIAL_POSITION_START;
     let mut part_one = 0;
     let mut part_two = 0;
 
-    for line in input.lines() {
-        let bytes = line.as_bytes();
-        let direction = bytes[0];
-        let magnitude: i32 = atoi(&bytes[1..]).expect("Invalid magnitude");
-        let rotation = if direction == b'R' {
-            magnitude
-        } else {
-            -magnitude
-        };
-
+    for rotation in input
+        .as_bytes()
+        .split(|&b| b == b'\n')
+        .filter(|b| !b.is_empty())
+        .map(parse_rotation)
+    {
         let (new_position, times_past_zero) = rotate_dial(position, rotation);
         part_one += (new_position == 0) as i32;
         part_two += times_past_zero;
@@ -51,6 +61,7 @@ fn day1(input: &str) -> (i32, i32) {
     (part_one, part_two)
 }
 
+#[inline(always)]
 fn main() {
     let input = get_input_as_string();
     let (p1, p2) = day1(&input);

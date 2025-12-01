@@ -1,11 +1,16 @@
-use std::{env, fs};
+use std::alloc::System;
+use std::ffi::OsString;
 use std::fs::File;
 use std::io::BufReader;
+use std::{env, fs};
+
+#[global_allocator]
+static GLOBAL: System = System;
 
 #[inline]
-/// Returns the filename of the input file as a string
-pub fn get_input_filename() -> String {
-    env::args().nth(1).expect("Input file was not specified")
+/// Returns the filename of the input file as an OsString
+pub fn get_input_filename() -> OsString {
+    env::args_os().nth(1).expect("Input file was not specified")
 }
 
 #[inline]
