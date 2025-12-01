@@ -5,62 +5,55 @@ const DIAL_POSITION_START: i32 = 50;
 const DIAL_POSITION_COUNT: i32 = 100;
 
 #[inline(always)]
-fn div_euclid_with_rem(x: i32) -> (i32, i32) {
-    // This is more efficient than performing multiple `rem_euclid` and `div_euclid` calls.
-    let quotient = x / DIAL_POSITION_COUNT;
-    let remainder = x - quotient * DIAL_POSITION_COUNT;
+fn rotate_dial(position: i32, rotation: i32) -> (i32, i32) {
+    let new_positon = position + rotation;
+    let mut quotient = new_positon / DIAL_POSITION_COUNT;
+    let mut remainder = new_positon - quotient * DIAL_POSITION_COUNT;
 
     if remainder < 0 {
-        (quotient - 1, remainder + DIAL_POSITION_COUNT)
-    } else {
-        (quotient, remainder)
+        quotient -= 1;
+        remainder += DIAL_POSITION_COUNT;
     }
-}
-
-#[inline(always)]
-fn rotate_dial(position: i32, rotation: i32) -> (i32, i32) {
-    let (new_position_quotient, new_position_remainder) = div_euclid_with_rem(position + rotation);
 
     let times_past_zero = if rotation > 0 {
-        new_position_quotient
+        quotient
     } else if rotation < 0 {
-        (position > 0) as i32 - new_position_quotient - (new_position_remainder > 0) as i32
+        (position > 0) as i32 - quotient - (remainder > 0) as i32
     } else {
         0
     };
 
-    (new_position_remainder, times_past_zero)
+    (remainder, times_past_zero)
 }
 
 #[inline(always)]
 fn day1(input: &str) -> (i32, i32) {
-    let initial_state = (DIAL_POSITION_START, 0, 0);
-    let (_, part_one, part_two) = input
-        .lines()
-        .map(|line| {
-            let direction = line.as_bytes().first().expect("Invalid direction");
-            let magnitude: i32 = atoi(&line.as_bytes()[1..]).expect("Invalid magnitude");
-            match direction {
-                b'R' => magnitude,
-                b'L' => -magnitude,
-                _ => panic!("Invalid direction"),
-            }
-        })
-        .fold(initial_state, |(position, part_one, part_two), rotation| {
-            let (new_position, times_zero) = rotate_dial(position, rotation);
-            (
-                new_position,
-                part_one + (new_position == 0) as i32,
-                part_two + times_zero,
-            )
-        });
+    let mut position = DIAL_POSITION_START;
+    let mut part_one = 0;
+    let mut part_two = 0;
+
+    for line in input.lines() {
+        let bytes = line.as_bytes();
+        let direction = bytes[0];
+        let magnitude: i32 = atoi(&bytes[1..]).expect("Invalid magnitude");
+        let rotation = if direction == b'R' {
+            magnitude
+        } else {
+            -magnitude
+        };
+
+        let (new_position, times_past_zero) = rotate_dial(position, rotation);
+        part_one += (new_position == 0) as i32;
+        part_two += times_past_zero;
+        position = new_position;
+    }
 
     (part_one, part_two)
 }
 
 fn main() {
     let input = get_input_as_string();
-    let (p1, p2) = day1(input.as_str());
+    let (p1, p2) = day1(&input);
     println!("{p1}\n{p2}");
 }
 
