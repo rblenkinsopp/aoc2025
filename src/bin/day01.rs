@@ -1,47 +1,61 @@
 use aoc2025::get_input_as_string;
+use atoi::atoi;
 
+const DIAL_POSITION_START: i32 = 50;
+const DIAL_POSITION_COUNT: i32 = 100;
 
-const INITIAL_DIAL_POSITION: i32 = 50;
+#[inline(always)]
+fn div_euclid_with_rem(x: i32) -> (i32, i32) {
+    // This is more efficient than performing multiple `rem_euclid` and `div_euclid` calls.
+    let quotient = x / DIAL_POSITION_COUNT;
+    let remainder = x - quotient * DIAL_POSITION_COUNT;
+
+    if remainder < 0 {
+        (quotient - 1, remainder + DIAL_POSITION_COUNT)
+    } else {
+        (quotient, remainder)
+    }
+}
 
 #[inline(always)]
 fn rotate_dial(position: i32, rotation: i32) -> (i32, i32) {
-    let new_position_raw = position + rotation;
-    let new_position = new_position_raw.rem_euclid(100);
+    let (new_position_quotient, new_position_remainder) = div_euclid_with_rem(position + rotation);
 
-    let crossings = match rotation.signum() {
-        1 => new_position_raw.div_euclid(100) - position.div_euclid(100),
-        -1 => (position + 99).div_euclid(100) - (new_position_raw + 99).div_euclid(100),
-        _ => 0,
+    let times_past_zero = if rotation > 0 {
+        new_position_quotient
+    } else if rotation < 0 {
+        (position > 0) as i32 - new_position_quotient - (new_position_remainder > 0) as i32
+    } else {
+        0
     };
 
-    (new_position, crossings)
+    (new_position_remainder, times_past_zero)
 }
-
 
 #[inline(always)]
 fn day1(input: &str) -> (i32, i32) {
-    let mut position: i32 = INITIAL_DIAL_POSITION;
-    let mut total_times_zero: i32 = 0;
-    let mut total_times_zero_passed: i32 = 0;
+    let initial_state = (DIAL_POSITION_START, 0, 0);
+    let (_, part_one, part_two) = input
+        .lines()
+        .map(|line| {
+            let direction = line.as_bytes().first().expect("Invalid direction");
+            let magnitude: i32 = atoi(&line.as_bytes()[1..]).expect("Invalid magnitude");
+            match direction {
+                b'R' => magnitude,
+                b'L' => -magnitude,
+                _ => panic!("Invalid direction"),
+            }
+        })
+        .fold(initial_state, |(position, part_one, part_two), rotation| {
+            let (new_position, times_zero) = rotate_dial(position, rotation);
+            (
+                new_position,
+                part_one + (new_position == 0) as i32,
+                part_two + times_zero,
+            )
+        });
 
-    for line in input.lines() {
-        let (dir_str, mag_str) = line.split_at(1);
-        let direction = dir_str.as_bytes().first().expect("Invalid direction");
-        let magnitude: i32 = mag_str.parse().expect("Invalid magnitude");
-
-        let rotation = match direction {
-            b'R' => magnitude,
-            b'L' => -magnitude,
-            _ => panic!("Invalid direction"),
-        };
-
-        let (new_position, times_zero) = rotate_dial(position, rotation);
-        total_times_zero += (new_position == 0) as i32;
-        total_times_zero_passed += times_zero;
-        position = new_position;
-    }
-
-    (total_times_zero, total_times_zero_passed)
+    (part_one, part_two)
 }
 
 fn main() {
@@ -52,8 +66,8 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use indoc::indoc;
     use super::*;
+    use indoc::indoc;
 
     #[test]
     fn test_rotate_dial() {
@@ -69,7 +83,7 @@ mod tests {
         assert_eq!(rotate_dial(0, 14), (14, 0));
         assert_eq!(rotate_dial(14, -82), (32, 1));
 
-        // Additional tests for edge cases to ensure correct operation.
+        // Additional tests for edge cases.
         assert_eq!(rotate_dial(0, 100), (0, 1));
         assert_eq!(rotate_dial(99, 1), (0, 1));
         assert_eq!(rotate_dial(0, -1), (99, 0));
