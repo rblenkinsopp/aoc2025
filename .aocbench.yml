@@ -16,4 +16,5 @@ answerfile: "data/answers/day%zeroday%.txt"
 common:
   - Cargo.lock
   - Cargo.toml
+  - .cargo/config.toml
   - src/lib.rs

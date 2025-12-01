@@ -1,0 +1,8 @@
+[build]
+rustflags = [
+    # Target the native CPU architecture to make use of possible optimizations.
+    "-C", "target-cpu=native",
+
+    # Disable AVX in-future if it leads to speed-ups due to pipeline stalls or throttling.
+    #"-C", "target-feature=-avx,-avx2",
+]

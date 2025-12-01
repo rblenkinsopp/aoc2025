@@ -5,6 +5,15 @@ authors = ["Robert Blenkinsopp <robert@blenkinsopp.net>"]
 version = "0.1.0"
 edition = "2024"
 
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+debug = false
+incremental = false
+strip = "symbols"
+panic = "abort"
+
 [dependencies]
 
 [dev-dependencies]
