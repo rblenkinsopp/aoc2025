@@ -3,18 +3,18 @@ use atoi::atoi;
 use rayon::prelude::*;
 
 const PERIOD_CANDIDATES: [&[usize]; 12] = [
-    &[],
-    &[],
-    &[1],
-    &[1],
-    &[1,2],
-    &[1],
-    &[1, 2, 3],
-    &[1],
-    &[1, 2, 4],
-    &[1, 3],
-    &[1, 2, 5],
-    &[1],
+    &[],     // 0
+    &[],     // 1
+    &[],     // 2 (ignore half-period 1 as already checked)
+    &[1],    // 3
+    &[1],    // 4 (ignore half-period 2 as already checked)
+    &[1],    // 5
+    &[1, 2], // 6 (ignore half-period 3 as already checked)
+    &[1],    // 7
+    &[1, 2], // 8 (ignore half-period 4 as already checked)
+    &[1, 3], // 9
+    &[1, 2], // 10 (ignore half-period 5 as already checked)
+    &[1],    // 11
 ];
 
 #[inline(always)]
@@ -31,13 +31,12 @@ fn is_invalid_product_id_bytes(bytes: &[u8]) -> (bool, bool) {
     let length = bytes.len();
     let half = length / 2;
 
-    // Part 1: Check if first half equals second half.
+    // Part 1: Check if first half equals second half (only if even length)
     let invalid_part_one = bytes[..half] == bytes[half..];
 
     // Part 2: Invalid if it has repeating patterns.
-    let candidates = PERIOD_CANDIDATES[length];
     let invalid_part_two = invalid_part_one
-        || candidates
+        || PERIOD_CANDIDATES[length]
             .iter()
             .copied()
             .any(|p| (p..length).all(|i| bytes[i] == bytes[i % p]));
