@@ -2,6 +2,21 @@ use aoc2025::get_input_as_string;
 use atoi::atoi;
 use rayon::prelude::*;
 
+const PERIOD_CANDIDATES: [&[usize]; 12] = [
+    &[],
+    &[],
+    &[1],
+    &[1],
+    &[1,2],
+    &[1],
+    &[1, 2, 3],
+    &[1],
+    &[1, 2, 4],
+    &[1, 3],
+    &[1, 2, 5],
+    &[1],
+];
+
 #[inline(always)]
 fn parse_range(range: &str) -> (i64, i64) {
     let (start, end) = range.split_once('-').unwrap();
@@ -20,9 +35,11 @@ fn is_invalid_product_id_bytes(bytes: &[u8]) -> (bool, bool) {
     let invalid_part_one = bytes[..half] == bytes[half..];
 
     // Part 2: Invalid if it has repeating patterns.
+    let candidates = PERIOD_CANDIDATES[length];
     let invalid_part_two = invalid_part_one
-        || (1..=half)
-            .filter(|&p| length % p == 0)
+        || candidates
+            .iter()
+            .copied()
             .any(|p| (p..length).all(|i| bytes[i] == bytes[i % p]));
 
     (invalid_part_one, invalid_part_two)
