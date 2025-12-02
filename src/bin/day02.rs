@@ -12,9 +12,7 @@ fn parse_range(range: &str) -> (i64, i64) {
 }
 
 #[inline(always)]
-fn is_invalid_product_id(id: i64) -> (bool, bool) {
-    let mut buffer = itoa::Buffer::new();
-    let bytes = buffer.format(id).as_bytes();
+fn is_invalid_product_id_bytes(bytes: &[u8]) -> (bool, bool) {
     let length = bytes.len();
     let half = length / 2;
 
@@ -46,11 +44,15 @@ fn day2(input: &str) -> (i64, i64) {
             || (0, 0),
             |(p1, p2), &(start, end)| {
                 let (mut part_one, mut part_two) = (p1, p2);
+                let mut buffer = itoa::Buffer::new();
+
                 for id in start..=end {
-                    let (inv_p1, inv_p2) = is_invalid_product_id(id);
+                    let bytes = buffer.format(id).as_bytes();
+                    let (inv_p1, inv_p2) = is_invalid_product_id_bytes(bytes);
                     part_one += inv_p1 as i64 * id;
                     part_two += inv_p2 as i64 * id;
                 }
+
                 (part_one, part_two)
             },
         )
@@ -68,6 +70,12 @@ fn main() {
 mod tests {
     use super::*;
 
+    fn is_invalid_product_id(id: i64) -> (bool, bool) {
+        let mut buffer = itoa::Buffer::new();
+        let bytes = buffer.format(id).as_bytes();
+        is_invalid_product_id_bytes(bytes)
+    }
+
     fn get_invalid_product_ids_part_one(range: (i64, i64)) -> Vec<i64> {
         (range.0..=range.1)
             .filter(|&id| is_invalid_product_id(id).0)
@@ -82,7 +90,7 @@ mod tests {
 
     #[test]
     #[rustfmt::skip]
-    fn test() {
+    fn test_get_invalid_product_ids() {
         // Part 1.
         assert_eq!(get_invalid_product_ids_part_one((11, 22)), vec![11, 22]);
         assert_eq!(get_invalid_product_ids_part_one((95, 115)), vec![99]);
