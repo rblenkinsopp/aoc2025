@@ -1,7 +1,9 @@
+use memmap2::Mmap;
 use std::alloc::System;
 use std::ffi::OsString;
 use std::fs::File;
 use std::io::BufReader;
+use std::sync::OnceLock;
 use std::{env, fs};
 
 #[global_allocator]
@@ -42,8 +44,3 @@ pub fn get_two_part_input_as_strings() -> (String, String) {
 
     (input, second)
 }
-
-// pub fn get_input_mmap() -> Mmap {
-//     unsafe { Mmap::map(&File::open(get_input_filename()).unwrap()) }
-//         .expect("Could not mmap input file")
-// }

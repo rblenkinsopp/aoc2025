@@ -1,15 +1,20 @@
-use atoi::atoi;
 use aoc2025::get_input_as_string;
+use atoi::atoi;
+use rayon::prelude::*;
 
 #[inline(always)]
 fn parse_range(range: &str) -> (i64, i64) {
     let (start, end) = range.split_once('-').unwrap();
-    (atoi(start.as_bytes()).unwrap(), atoi(end.as_bytes()).unwrap())
+    (
+        atoi(start.as_bytes()).unwrap(),
+        atoi(end.as_bytes()).unwrap(),
+    )
 }
 
 #[inline(always)]
 fn is_invalid_product_id(id: i64) -> (bool, bool) {
-    let bytes = id.to_string().into_bytes();
+    let mut buffer = itoa::Buffer::new();
+    let bytes = buffer.format(id).as_bytes();
     let length = bytes.len();
     let half = length / 2;
 
@@ -27,19 +32,29 @@ fn is_invalid_product_id(id: i64) -> (bool, bool) {
 
 #[inline(always)]
 fn day2(input: &str) -> (i64, i64) {
-    input
+    // Collect the ranges we need to check for valid ids.
+    let ranges: Vec<_> = input
         .lines()
         .flat_map(|line| line.split(','))
         .map(parse_range)
-        .fold((0, 0), |(p1, p2), (start, end)| {
-            let (mut part_one, mut part_two) = (p1, p2);
-            for id in start..=end {
-                let (inv_p1, inv_p2) = is_invalid_product_id(id);
-                part_one += inv_p1 as i64 * id;
-                part_two += inv_p2 as i64 * id;
-            }
-            (part_one, part_two)
-        })
+        .collect();
+
+    // Distribute the work over all cores and reduce the result.
+    ranges
+        .par_iter()
+        .fold(
+            || (0, 0),
+            |(p1, p2), &(start, end)| {
+                let (mut part_one, mut part_two) = (p1, p2);
+                for id in start..=end {
+                    let (inv_p1, inv_p2) = is_invalid_product_id(id);
+                    part_one += inv_p1 as i64 * id;
+                    part_two += inv_p2 as i64 * id;
+                }
+                (part_one, part_two)
+            },
+        )
+        .reduce(|| (0, 0), |a, b| (a.0 + b.0, a.1 + b.1))
 }
 
 #[inline(always)]
