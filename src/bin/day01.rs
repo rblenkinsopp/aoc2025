@@ -1,11 +1,11 @@
 use aoc2025::get_input_as_str;
 use atoi::atoi;
 
-const DIAL_POSITION_START: i32 = 50;
-const DIAL_POSITION_COUNT: i32 = 100;
+const DIAL_POSITION_START: i16 = 50;
+const DIAL_POSITION_COUNT: i16 = 100;
 
 #[inline(always)]
-fn rotate_dial(position: i32, rotation: i32) -> (i32, i32) {
+fn rotate_dial(position: i16, rotation: i16) -> (i16, i16) {
     let new_positon = position + rotation;
     let mut quotient = new_positon / DIAL_POSITION_COUNT;
     let mut remainder = new_positon - quotient * DIAL_POSITION_COUNT;
@@ -18,7 +18,7 @@ fn rotate_dial(position: i32, rotation: i32) -> (i32, i32) {
     let times_past_zero = if rotation > 0 {
         quotient
     } else if rotation < 0 {
-        (position > 0) as i32 - quotient - (remainder > 0) as i32
+        (position > 0) as i16 - quotient - (remainder > 0) as i16
     } else {
         0
     };
@@ -27,13 +27,13 @@ fn rotate_dial(position: i32, rotation: i32) -> (i32, i32) {
 }
 
 #[inline(always)]
-fn parse_rotation(bytes: &[u8]) -> i32 {
-    let sign = ((bytes[0] == b'R') as i32) * 2 - 1;
-    sign * atoi::<i32>(&bytes[1..]).unwrap()
+fn parse_rotation(bytes: &[u8]) -> i16 {
+    let sign = ((bytes[0] == b'R') as i16) * 2 - 1;
+    sign * atoi::<i16>(&bytes[1..]).unwrap()
 }
 
 #[inline(always)]
-fn day1(input: &str) -> (i32, i32) {
+fn day1(input: &str) -> (i16, i16) {
     let mut position = DIAL_POSITION_START;
     let mut part_one = 0;
     let mut part_two = 0;
@@ -41,7 +41,7 @@ fn day1(input: &str) -> (i32, i32) {
     for line in input.lines() {
         let rotation = parse_rotation(line.as_bytes());
         let (new_position, times_past_zero) = rotate_dial(position, rotation);
-        part_one += (new_position == 0) as i32;
+        part_one += (new_position == 0) as i16;
         part_two += times_past_zero;
         position = new_position;
     }
@@ -99,8 +99,8 @@ mod tests {
             R14
             L82
         "};
-        const SAMPLE_PART1_ANSWER: i32 = 3;
-        const SAMPLE_PART2_ANSWER: i32 = 6;
+        const SAMPLE_PART1_ANSWER: i16 = 3;
+        const SAMPLE_PART2_ANSWER: i16 = 6;
 
         let (part1_answer, part2_answer) = day1(SAMPLE_INPUT);
         assert_eq!(part1_answer, SAMPLE_PART1_ANSWER, "Part 1 is incorrect");
