@@ -42,3 +42,8 @@ pub fn get_two_part_input_as_strings() -> (String, String) {
 
     (input, second)
 }
+
+// pub fn get_input_mmap() -> Mmap {
+//     unsafe { Mmap::map(&File::open(get_input_filename()).unwrap()) }
+//         .expect("Could not mmap input file")
+// }
