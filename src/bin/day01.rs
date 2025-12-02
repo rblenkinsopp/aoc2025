@@ -1,4 +1,4 @@
-use aoc2025::get_input_as_string;
+use aoc2025::get_input_as_str;
 use atoi::atoi;
 
 const DIAL_POSITION_START: i32 = 50;
@@ -51,8 +51,7 @@ fn day1(input: &str) -> (i32, i32) {
 
 #[inline(always)]
 fn main() {
-    let input = get_input_as_string();
-    let (p1, p2) = day1(&input);
+    let (p1, p2) = day1(get_input_as_str());
     println!("{p1}\n{p2}");
 }
 

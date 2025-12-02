@@ -44,3 +44,16 @@ pub fn get_two_part_input_as_strings() -> (String, String) {
 
     (input, second)
 }
+
+#[inline(always)]
+/// Gets the input file as a static memory-mapped string without allocations.
+pub fn get_input_as_str() -> &'static str {
+    unsafe {
+        static MMAP: OnceLock<Mmap> = OnceLock::new();
+        let mmap = MMAP.get_or_init(|| {
+            Mmap::map(&File::open(get_input_filename()).expect("Failed to open input file"))
+                .expect("Failed to mmap input file")
+        });
+        str::from_utf8_unchecked(mmap)
+    }
+}
