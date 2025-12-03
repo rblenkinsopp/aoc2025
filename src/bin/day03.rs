@@ -1,4 +1,4 @@
-use aoc2025::get_input_as_string;
+use aoc2025::{get_input_as_str, UniformInputIterator};
 use atoi::atoi;
 
 #[inline(always)]
@@ -22,10 +22,8 @@ fn get_max_digit_in_slice(slice: &[u8]) -> (u8, usize) {
 }
 
 #[inline(always)]
-fn get_max_joltage(bank: &str) -> (i64, i64) {
+fn get_max_joltage(bytes: &[u8]) -> (i64, i64) {
     const MAX_BATTERIES_PER_BANK_PART_TWO: usize = 12;
-
-    let bytes = bank.as_bytes();
 
     // Part 1.
     let (a, offset) = get_max_digit_in_slice(&bytes[..bytes.len() - 1]);
@@ -49,7 +47,7 @@ fn get_max_joltage(bank: &str) -> (i64, i64) {
 
 #[inline(always)]
 fn day3(input: &str) -> (i64, i64) {
-    input.lines().fold((0, 0), |(p1, p2), line| {
+    UniformInputIterator::from_bytes(input.as_bytes()).fold((0, 0), |(p1, p2), line| {
         let (v1, v2) = get_max_joltage(line);
         (p1 + v1, p2 + v2)
     })
@@ -57,8 +55,8 @@ fn day3(input: &str) -> (i64, i64) {
 
 #[inline(always)]
 fn main() {
-    let input = get_input_as_string();
-    let (p1, p2) = day3(&input);
+    let input = get_input_as_str();
+    let (p1, p2) = day3(input);
     println!("{p1}\n{p2}");
 }
 
@@ -69,10 +67,10 @@ mod tests {
 
     #[test]
     fn test_get_max_joltage() {
-        assert_eq!(get_max_joltage("987654321111111"), (98, 987654321111));
-        assert_eq!(get_max_joltage("811111111111119"), (89, 811111111119));
-        assert_eq!(get_max_joltage("234234234234278"), (78, 434234234278));
-        assert_eq!(get_max_joltage("818181911112111"), (92, 888911112111));
+        assert_eq!(get_max_joltage("987654321111111".as_bytes()), (98, 987654321111));
+        assert_eq!(get_max_joltage("811111111111119".as_bytes()), (89, 811111111119));
+        assert_eq!(get_max_joltage("234234234234278".as_bytes()), (78, 434234234278));
+        assert_eq!(get_max_joltage("818181911112111".as_bytes()), (92, 888911112111));
     }
 
     #[test]

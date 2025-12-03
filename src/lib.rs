@@ -1,3 +1,4 @@
+use memchr::memchr;
 use memmap2::Mmap;
 use std::alloc::System;
 use std::ffi::OsString;
@@ -46,14 +47,64 @@ pub fn get_two_part_input_as_strings() -> (String, String) {
 }
 
 #[inline(always)]
-/// Gets the input file as a static memory-mapped string without allocations.
-pub fn get_input_as_str() -> &'static str {
+/// Gets the input file as static memory-mapped bytes without allocations.
+pub fn get_input_as_bytes() -> &'static [u8] {
     unsafe {
         static MMAP: OnceLock<Mmap> = OnceLock::new();
-        let mmap = MMAP.get_or_init(|| {
+        MMAP.get_or_init(|| {
             Mmap::map(&File::open(get_input_filename()).expect("Failed to open input file"))
                 .expect("Failed to mmap input file")
-        });
-        str::from_utf8_unchecked(mmap)
+        })
+        .as_ref()
+    }
+}
+
+#[inline(always)]
+/// Gets the input file as a static memory-mapped string without allocations.
+pub fn get_input_as_str() -> &'static str {
+    unsafe { str::from_utf8_unchecked(get_input_as_bytes()) }
+}
+
+pub struct UniformInputIterator<'a> {
+    bytes: &'a [u8],
+    length: usize,
+    line_length: usize,
+    stride: usize,
+    offset: usize,
+}
+
+impl<'a> UniformInputIterator<'a> {
+    #[inline(always)]
+    pub fn from_bytes(bytes: &'a [u8]) -> Self {
+        let length = bytes.len();
+        let line_length = memchr(b'\n', bytes).unwrap_or(length);
+        Self::from_bytes_with_line_length(bytes, line_length)
+    }
+
+    #[inline(always)]
+    pub fn from_bytes_with_line_length(bytes: &'a [u8], line_length: usize) -> Self {
+        Self {
+            bytes,
+            length: bytes.len(),
+            line_length,
+            stride: line_length + 1,
+            offset: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for UniformInputIterator<'a> {
+    type Item = &'a [u8];
+
+    #[inline(always)]
+    fn next(&mut self) -> Option<Self::Item> {
+        let start = self.offset;
+        let end = start + self.line_length;
+        if end > self.length {
+            return None;
+        }
+
+        self.offset =  start + self.stride;
+        Some(unsafe { self.bytes.get_unchecked(start..end) })
     }
 }
