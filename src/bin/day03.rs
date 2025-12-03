@@ -1,4 +1,4 @@
-use aoc2025::get_input_as_string;
+use aoc2025::get_input_as_str;
 use atoi::atoi;
 
 const MAX_BATTERIES_PER_BANK_PART_ONE: usize = 2;
@@ -34,8 +34,7 @@ fn day3(input: &str) -> (i64, i64) {
 
 #[inline(always)]
 fn main() {
-    let input = get_input_as_string();
-    let (p1, p2) = day3(&input);
+    let (p1, p2) = day3(get_input_as_str());
     println!("{p1}\n{p2}");
 }
 
