@@ -1,61 +1,63 @@
 use aoc2025::get_input_as_string;
 use atoi::atoi;
 
-const MAX_BATTERIES_PER_BANK_PART_ONE: usize = 2;
-const MAX_BATTERIES_PER_BANK_PART_TWO: usize = 12;
 const MAX_BANK_LENGTH: usize = 100;
+
+#[inline(always)]
+fn get_max_joltage_part_one(bytes: &[u8]) -> i64 {
+    let mut max_left = b'0';
+    let mut max_right = b'0';
+    let mut best_right = bytes[bytes.len() - 1];
+
+    let mut i = bytes.len() - 1;
+    while i > 0 {
+        i -= 1;
+
+        let a = bytes[i];
+        let b = best_right;
+
+        if a > max_left || (a == max_left && b > max_right) {
+            max_left = a;
+            max_right = b;
+            if max_left == b'9' && max_right == b'9' {
+                return 99;
+            }
+        }
+
+        if a > best_right {
+            best_right = a;
+        }
+    }
+
+    atoi(&[max_left, max_right]).unwrap()
+}
+
+#[inline(always)]
+fn get_max_joltage_part_two(bytes: &[u8]) -> i64 {
+    const MAX_BATTERIES_PER_BANK_PART_TWO: usize = 12;
+
+    let mut stack = [0u8; MAX_BANK_LENGTH];
+    let mut stack_length = 0usize;
+    let mut left_to_remove = bytes.len() - MAX_BATTERIES_PER_BANK_PART_TWO;
+
+    for &digit in bytes {
+        while left_to_remove > 0 && stack_length > 0 && stack[stack_length - 1] < digit {
+            stack_length -= 1;
+            left_to_remove -= 1;
+        }
+        stack[stack_length] = digit;
+        stack_length += 1;
+    }
+
+    atoi(&stack[..MAX_BATTERIES_PER_BANK_PART_TWO]).unwrap()
+}
 
 #[inline(always)]
 fn get_max_joltage(bank: &str) -> (i64, i64) {
     let bytes = bank.as_bytes();
-    let length = bytes.len();
-
-    // Part 1 state.
-    let mut stack1 = [0u8; MAX_BANK_LENGTH];
-    let mut length1 = 0usize;
-    let mut left_to_remove1 = length - MAX_BATTERIES_PER_BANK_PART_ONE;
-    let mut done1 = false;
-
-    // Part 2 state.
-    let mut stack2 = [0u8; MAX_BANK_LENGTH];
-    let mut length2 = 0usize;
-    let mut left_to_remove2 = length - MAX_BATTERIES_PER_BANK_PART_TWO;
-
-    for &digit in bytes {
-        // Part 1 (with early exit when 99 has been found).
-        if !done1 {
-            let mut new_len1 = length1;
-            let mut remove1 = left_to_remove1;
-            while remove1 > 0 && new_len1 > 0 && stack1[new_len1 - 1] < digit {
-                new_len1 -= 1;
-                remove1 -= 1;
-            }
-            length1 = new_len1;
-            left_to_remove1 = remove1;
-            stack1[length1] = digit;
-            length1 += 1;
-
-            if length1 == MAX_BATTERIES_PER_BANK_PART_ONE && stack1[..2] == [b'9', b'9'] {
-                done1 = true;
-            }
-        }
-
-        // Part 2 (no early exit as seems non-existent, at least in my input data)
-        let mut new_len2 = length2;
-        let mut remove2 = left_to_remove2;
-        while remove2 > 0 && new_len2 > 0 && stack2[new_len2 - 1] < digit {
-            new_len2 -= 1;
-            remove2 -= 1;
-        }
-        length2 = new_len2;
-        left_to_remove2 = remove2;
-        stack2[length2] = digit;
-        length2 += 1;
-    }
-
     (
-        atoi(&stack1[..MAX_BATTERIES_PER_BANK_PART_ONE]).unwrap(),
-        atoi(&stack2[..MAX_BATTERIES_PER_BANK_PART_TWO]).unwrap(),
+        get_max_joltage_part_one(bytes),
+        get_max_joltage_part_two(bytes),
     )
 }
 
