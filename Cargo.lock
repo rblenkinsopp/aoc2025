@@ -6,12 +6,22 @@ version = 4
 name = "aoc2025"
 version = "0.2.0"
 dependencies = [
+ "argminmax",
  "atoi",
  "indoc",
  "itoa",
  "memchr",
  "memmap2",
  "rayon",
+]
+
+[[package]]
+name = "argminmax"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70f13d10a41ac8d2ec79ee34178d61e6f47a29c2edfe7ef1721c7383b0359e65"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]

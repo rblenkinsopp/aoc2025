@@ -1,46 +1,33 @@
-use aoc2025::{get_input_as_str, UniformInputIterator};
-use atoi::atoi;
-
-#[inline(always)]
-fn get_max_digit_in_slice(slice: &[u8]) -> (u8, usize) {
-    let mut max_value = slice[0];
-    let mut max_off = 0;
-
-    if max_value != b'9' {
-        for (off, &d) in slice[1..].iter().enumerate() {
-            if d > max_value {
-                max_value = d;
-                max_off = off + 1;
-                if d == b'9' {
-                    break;
-                }
-            }
-        }
-    }
-
-    (max_value, max_off + 1)
-}
+use aoc2025::{UniformInputIterator, get_input_as_str};
+use argminmax::ArgMinMax;
 
 #[inline(always)]
 fn get_max_joltage(bytes: &[u8]) -> (i64, i64) {
     const MAX_BATTERIES_PER_BANK_PART_TWO: usize = 12;
 
     // Part 1.
-    let (a, offset) = get_max_digit_in_slice(&bytes[..bytes.len() - 1]);
-    let (b, _) = get_max_digit_in_slice(&bytes[offset..]);
-    let part_one = atoi(&[a, b]).unwrap();
+    let a_index = (&bytes[..bytes.len() - 1]).argmax();
+    let b_index = a_index + 1 + (&bytes[a_index + 1..]).argmax();
+    let part_one: i64 = unsafe {
+        // Safety: We've just confirmed these indexes are valid from the search above.
+        let a = *bytes.get_unchecked(a_index);
+        let b = *bytes.get_unchecked(b_index);
+        ((a - b'0') as i64) * 10 + ((b - b'0') as i64)
+    };
 
     // Part 2.
-    let mut slice = bytes;
-    let mut buffer = [0; MAX_BATTERIES_PER_BANK_PART_TWO];
-    for (i, digit) in buffer.iter_mut().enumerate() {
-        let remaining = MAX_BATTERIES_PER_BANK_PART_TWO - i;
-        let end = slice.len() - remaining;
-        let (v, offset) = get_max_digit_in_slice(&slice[..=end]);
-        *digit = v;
-        slice = &slice[offset..];
+    let mut start: usize = 0;
+    let mut end = bytes.len() - MAX_BATTERIES_PER_BANK_PART_TWO;
+    let mut part_two: i64 = 0;
+
+    for _ in 0..MAX_BATTERIES_PER_BANK_PART_TWO {
+        let offset = (&bytes[start..=end]).argmax();
+        let index = start + offset;
+        let digit = unsafe { *bytes.get_unchecked(index) };
+        part_two = part_two * 10 + (digit - b'0') as i64;
+        start = index + 1;
+        end += 1;
     }
-    let part_two = atoi(&buffer).unwrap();
 
     (part_one, part_two)
 }
@@ -66,6 +53,7 @@ mod tests {
     use indoc::indoc;
 
     #[test]
+    #[rustfmt::skip]
     fn test_get_max_joltage() {
         assert_eq!(get_max_joltage("987654321111111".as_bytes()), (98, 987654321111));
         assert_eq!(get_max_joltage("811111111111119".as_bytes()), (89, 811111111119));
