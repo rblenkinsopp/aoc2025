@@ -1,64 +1,50 @@
 use aoc2025::get_input_as_string;
 use atoi::atoi;
 
-const MAX_BANK_LENGTH: usize = 100;
-
 #[inline(always)]
-fn get_max_joltage_part_one(bytes: &[u8]) -> i64 {
-    let mut max_left = b'0';
-    let mut max_right = b'0';
-    let mut best_right = bytes[bytes.len() - 1];
+fn get_max_digit_in_slice(slice: &[u8]) -> (u8, usize) {
+    let mut max_value = slice[0];
+    let mut max_off = 0;
 
-    let mut i = bytes.len() - 1;
-    while i > 0 {
-        i -= 1;
-
-        let a = bytes[i];
-        let b = best_right;
-
-        if a > max_left || (a == max_left && b > max_right) {
-            max_left = a;
-            max_right = b;
-            if max_left == b'9' && max_right == b'9' {
-                return 99;
+    if max_value != b'9' {
+        for (off, &d) in slice[1..].iter().enumerate() {
+            if d > max_value {
+                max_value = d;
+                max_off = off + 1;
+                if d == b'9' {
+                    break;
+                }
             }
         }
-
-        if a > best_right {
-            best_right = a;
-        }
     }
 
-    atoi(&[max_left, max_right]).unwrap()
-}
-
-#[inline(always)]
-fn get_max_joltage_part_two(bytes: &[u8]) -> i64 {
-    const MAX_BATTERIES_PER_BANK_PART_TWO: usize = 12;
-
-    let mut stack = [0u8; MAX_BANK_LENGTH];
-    let mut stack_length = 0usize;
-    let mut left_to_remove = bytes.len() - MAX_BATTERIES_PER_BANK_PART_TWO;
-
-    for &digit in bytes {
-        while left_to_remove > 0 && stack_length > 0 && stack[stack_length - 1] < digit {
-            stack_length -= 1;
-            left_to_remove -= 1;
-        }
-        stack[stack_length] = digit;
-        stack_length += 1;
-    }
-
-    atoi(&stack[..MAX_BATTERIES_PER_BANK_PART_TWO]).unwrap()
+    (max_value, max_off + 1)
 }
 
 #[inline(always)]
 fn get_max_joltage(bank: &str) -> (i64, i64) {
+    const MAX_BATTERIES_PER_BANK_PART_TWO: usize = 12;
+
     let bytes = bank.as_bytes();
-    (
-        get_max_joltage_part_one(bytes),
-        get_max_joltage_part_two(bytes),
-    )
+
+    // Part 1.
+    let (a, offset) = get_max_digit_in_slice(&bytes[..bytes.len() - 1]);
+    let (b, _) = get_max_digit_in_slice(&bytes[offset..]);
+    let part_one = atoi(&[a, b]).unwrap();
+
+    // Part 2.
+    let mut slice = bytes;
+    let mut buffer = [0; MAX_BATTERIES_PER_BANK_PART_TWO];
+    for (i, digit) in buffer.iter_mut().enumerate() {
+        let remaining = MAX_BATTERIES_PER_BANK_PART_TWO - i;
+        let end = slice.len() - remaining;
+        let (v, offset) = get_max_digit_in_slice(&slice[..=end]);
+        *digit = v;
+        slice = &slice[offset..];
+    }
+    let part_two = atoi(&buffer).unwrap();
+
+    (part_one, part_two)
 }
 
 #[inline(always)]
