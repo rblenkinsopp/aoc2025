@@ -3,34 +3,60 @@ use atoi::atoi;
 
 const MAX_BATTERIES_PER_BANK_PART_ONE: usize = 2;
 const MAX_BATTERIES_PER_BANK_PART_TWO: usize = 12;
+const MAX_BANK_LENGTH: usize = 100;
 
 #[inline(always)]
 fn get_max_joltage(bank: &str) -> (i64, i64) {
     let bytes = bank.as_bytes();
     let length = bytes.len();
-    let mut stacks = [
-        (Vec::with_capacity(length), length - MAX_BATTERIES_PER_BANK_PART_ONE),
-        (Vec::with_capacity(length), length - MAX_BATTERIES_PER_BANK_PART_TWO),
-    ];
+
+    // Part 1 state.
+    let mut stack1 = [0u8; MAX_BANK_LENGTH];
+    let mut length1 = 0usize;
+    let mut left_to_remove1 = length - MAX_BATTERIES_PER_BANK_PART_ONE;
+    let mut done1 = false;
+
+    // Part 2 state.
+    let mut stack2 = [0u8; MAX_BANK_LENGTH];
+    let mut length2 = 0usize;
+    let mut left_to_remove2 = length - MAX_BATTERIES_PER_BANK_PART_TWO;
 
     for &digit in bytes {
-        for (stack, left_to_remove) in stacks.iter_mut() {
-            while *left_to_remove > 0 {
-                match stack.last() {
-                    Some(&last) if last < digit => {
-                        stack.pop();
-                        *left_to_remove -= 1;
-                    }
-                    _ => break,
-                }
+        // Part 1 (with early exit when 99 has been found).
+        if !done1 {
+            let mut new_len1 = length1;
+            let mut remove1 = left_to_remove1;
+            while remove1 > 0 && new_len1 > 0 && stack1[new_len1 - 1] < digit {
+                new_len1 -= 1;
+                remove1 -= 1;
             }
-            stack.push(digit);
+            length1 = new_len1;
+            left_to_remove1 = remove1;
+            stack1[length1] = digit;
+            length1 += 1;
+
+            if length1 == MAX_BATTERIES_PER_BANK_PART_ONE && stack1[..2] == [b'9', b'9'] {
+                done1 = true;
+            }
         }
+
+        // Part 2 (no early exit as seems non-existent, at least in my input data)
+        let mut new_len2 = length2;
+        let mut remove2 = left_to_remove2;
+        while remove2 > 0 && new_len2 > 0 && stack2[new_len2 - 1] < digit {
+            new_len2 -= 1;
+            remove2 -= 1;
+        }
+        length2 = new_len2;
+        left_to_remove2 = remove2;
+        stack2[length2] = digit;
+        length2 += 1;
     }
 
-    stacks[0].0.truncate(MAX_BATTERIES_PER_BANK_PART_ONE);
-    stacks[1].0.truncate(MAX_BATTERIES_PER_BANK_PART_TWO);
-    (atoi(&stacks[0].0).unwrap(), atoi(&stacks[1].0).unwrap())
+    (
+        atoi(&stack1[..MAX_BATTERIES_PER_BANK_PART_ONE]).unwrap(),
+        atoi(&stack2[..MAX_BATTERIES_PER_BANK_PART_TWO]).unwrap(),
+    )
 }
 
 #[inline(always)]
