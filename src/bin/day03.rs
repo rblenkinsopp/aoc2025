@@ -5,30 +5,39 @@ const MAX_BATTERIES_PER_BANK_PART_ONE: usize = 2;
 const MAX_BATTERIES_PER_BANK_PART_TWO: usize = 12;
 
 #[inline(always)]
-fn get_max_joltage(bank: &str, max_batteries: usize) -> i64 {
+fn get_max_joltage(bank: &str) -> (i64, i64) {
     let bytes = bank.as_bytes();
-    let mut to_remove = bytes.len() - max_batteries;
-    let mut stack: Vec<u8> = Vec::with_capacity(bytes.len());
+    let length = bytes.len();
+    let mut stacks = [
+        (Vec::with_capacity(length), length - MAX_BATTERIES_PER_BANK_PART_ONE),
+        (Vec::with_capacity(length), length - MAX_BATTERIES_PER_BANK_PART_TWO),
+    ];
 
-    for &d in bytes {
-        while to_remove > 0 && !stack.is_empty() && *stack.last().unwrap() < d {
-            stack.pop();
-            to_remove -= 1;
+    for &digit in bytes {
+        for (stack, left_to_remove) in stacks.iter_mut() {
+            while *left_to_remove > 0 {
+                match stack.last() {
+                    Some(&last) if last < digit => {
+                        stack.pop();
+                        *left_to_remove -= 1;
+                    }
+                    _ => break,
+                }
+            }
+            stack.push(digit);
         }
-        stack.push(d);
     }
 
-    stack.truncate(max_batteries);
-    atoi(&stack).unwrap()
+    stacks[0].0.truncate(MAX_BATTERIES_PER_BANK_PART_ONE);
+    stacks[1].0.truncate(MAX_BATTERIES_PER_BANK_PART_TWO);
+    (atoi(&stacks[0].0).unwrap(), atoi(&stacks[1].0).unwrap())
 }
 
 #[inline(always)]
 fn day3(input: &str) -> (i64, i64) {
     input.lines().fold((0, 0), |(p1, p2), line| {
-        (
-            p1 + get_max_joltage(line, MAX_BATTERIES_PER_BANK_PART_ONE),
-            p2 + get_max_joltage(line, MAX_BATTERIES_PER_BANK_PART_TWO),
-        )
+        let (v1, v2) = get_max_joltage(line);
+        (p1 + v1, p2 + v2)
     })
 }
 
@@ -45,41 +54,10 @@ mod tests {
 
     #[test]
     fn test_get_max_joltage() {
-        // Part 1.
-        assert_eq!(
-            get_max_joltage("987654321111111", MAX_BATTERIES_PER_BANK_PART_ONE),
-            98
-        );
-        assert_eq!(
-            get_max_joltage("811111111111119", MAX_BATTERIES_PER_BANK_PART_ONE),
-            89
-        );
-        assert_eq!(
-            get_max_joltage("234234234234278", MAX_BATTERIES_PER_BANK_PART_ONE),
-            78
-        );
-        assert_eq!(
-            get_max_joltage("818181911112111", MAX_BATTERIES_PER_BANK_PART_ONE),
-            92
-        );
-
-        // Part 2.
-        assert_eq!(
-            get_max_joltage("987654321111111", MAX_BATTERIES_PER_BANK_PART_TWO),
-            987654321111
-        );
-        assert_eq!(
-            get_max_joltage("811111111111119", MAX_BATTERIES_PER_BANK_PART_TWO),
-            811111111119
-        );
-        assert_eq!(
-            get_max_joltage("234234234234278", MAX_BATTERIES_PER_BANK_PART_TWO),
-            434234234278
-        );
-        assert_eq!(
-            get_max_joltage("818181911112111", MAX_BATTERIES_PER_BANK_PART_TWO),
-            888911112111
-        );
+        assert_eq!(get_max_joltage("987654321111111"), (98, 987654321111));
+        assert_eq!(get_max_joltage("811111111111119"), (89, 811111111119));
+        assert_eq!(get_max_joltage("234234234234278"), (78, 434234234278));
+        assert_eq!(get_max_joltage("818181911112111"), (92, 888911112111));
     }
 
     #[test]
