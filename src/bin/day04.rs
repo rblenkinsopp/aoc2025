@@ -1,27 +1,21 @@
 use aoc2025::{Grid, get_input_as_str};
-use std::str::FromStr;
 
 #[inline(always)]
 fn remove_rolls(grid: &mut Grid) -> usize {
-    let removable_rolls: Vec<usize> = grid
-        .iter()
-        .filter(|p| p.value() == b'@')
+    let removable: Vec<usize> = grid
+        .filter_iter(b'@')
         .filter(|p| p.adjacent_iter().filter(|n| n.value() == b'@').count() < 4)
-        .map(|p| p.index())
+        .map(|p| p.offset())
         .collect();
 
-    let removed_rolls = removable_rolls.len();
-
-    removable_rolls
-        .into_iter()
-        .for_each(|index| grid.set_index(index, b'.'));
-
-    removed_rolls
+    let removed = removable.len();
+    removable.into_iter().for_each(|i| grid.set_offset(i, b'.'));
+    removed
 }
 
 #[inline(always)]
 fn day4(input: &str) -> (i64, i64) {
-    let mut grid = Grid::from_str(input).unwrap();
+    let mut grid = input.parse().unwrap();
 
     let (first, total) = std::iter::repeat_with(|| remove_rolls(&mut grid))
         .take_while(|&n| n != 0)
@@ -59,7 +53,7 @@ mod tests {
 
     #[test]
     fn test_remove_rools() {
-        let mut grid = Grid::from_str(SAMPLE_INPUT).unwrap();
+        let mut grid = SAMPLE_INPUT.parse().unwrap();
 
         // Puzzle test cases.
         assert_eq!(remove_rolls(&mut grid), 13);

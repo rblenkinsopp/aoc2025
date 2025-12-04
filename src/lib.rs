@@ -1,12 +1,13 @@
-use memchr::memchr;
+use memchr::{memchr, memchr_iter};
 use memmap2::Mmap;
 use std::alloc::System;
 use std::ffi::OsString;
 use std::fs::File;
 use std::io::BufReader;
+use std::ops::Deref;
+use std::str::FromStr;
 use std::sync::OnceLock;
 use std::{env, fs};
-use std::str::FromStr;
 
 #[global_allocator]
 static GLOBAL: System = System;
@@ -32,11 +33,8 @@ pub fn get_input_as_string() -> String {
 /// Gets the two different parts of the puzzle input as strings
 #[inline]
 pub fn get_two_part_input_as_strings() -> (String, String) {
-    // Only support Unix newlines for now.
     const DOUBLE_NEWLINE: &str = "\n\n";
 
-    // Find the split point and then split off the second part input.
-    // This does not use 'String::split_once' as that leads to additional allocations.
     let mut input = get_input_as_string();
     let split_pos = input
         .find(DOUBLE_NEWLINE)
@@ -116,70 +114,13 @@ pub struct Grid {
     height: usize,
 }
 
-pub struct GridPoint<'a> {
-    grid: &'a Grid,
-    x: usize,
-    y: usize,
-    value: &'a u8,
-}
-
-impl<'a> GridPoint<'a> {
-    #[inline(always)]
-    pub fn value(&self) -> u8 {
-        *self.value
-    }
-
-    #[inline(always)]
-    pub fn value_ref(&self) -> &'a u8 {
-        self.value
-    }
-
-    #[inline(always)]
-    pub fn index(&self) -> usize {
-        self.y * self.grid.width + self.x
-    }
-
-    #[inline(always)]
-    pub fn adjacent_iter(&self) -> impl Iterator<Item = GridPoint<'a>> + '_ {
-        #[rustfmt::skip]
-        const OFFSETS: [(isize, isize); 8] = [
-            (-1, -1), (0, -1), (1, -1),
-            (-1,  0), /* GP */ (1,  0),
-            (-1,  1), (0,  1), (1,  1),
-        ];
-
-        OFFSETS.into_iter().filter_map(move |(dx, dy)| {
-            let nx = self.x as isize + dx;
-            let ny = self.y as isize + dy;
-
-            if nx < 0 || ny < 0 || nx >= self.grid.width as isize || ny >= self.grid.height as isize
-            {
-                return None;
-            }
-
-            let x = nx as usize;
-            let y = ny as usize;
-            let idx = y * self.grid.width + x;
-            let value = unsafe {
-                // Safety: Indices have already been validated above.
-                self.grid.bytes.get_unchecked(idx)
-            };
-
-            Some(GridPoint {
-                grid: self.grid,
-                x,
-                y,
-                value,
-            })
-        })
-    }
-}
-
 impl FromStr for Grid {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::from_uniform_input_iter(UniformInputIterator::from_bytes(s.as_bytes())))
+        Ok(Self::from_uniform_input_iter(
+            UniformInputIterator::from_bytes(s.as_bytes()),
+        ))
     }
 }
 
@@ -202,53 +143,117 @@ impl Grid {
         }
     }
 
-    pub fn iter(&self) -> GridPointIterator<'_> {
-        GridPointIterator {
-            grid: self,
-            x: 0,
-            y: 0,
-        }
+    #[inline(always)]
+    pub fn width(&self) -> usize {
+        self.width
     }
 
     #[inline(always)]
-    pub fn set_index(&mut self, idx: usize, v: u8) {
-        self.bytes[idx] = v;
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    #[inline(always)]
+    pub fn iter(&self) -> impl Iterator<Item = GridPoint<'_>> + '_ {
+        (0..self.bytes.len()).map(move |offset| GridPoint { grid: self, offset })
+    }
+
+    #[inline(always)]
+    pub fn filter_iter(&self, needle: u8) -> impl Iterator<Item = GridPoint<'_>> + '_ {
+        memchr_iter(needle, &self.bytes).map(move |offset| GridPoint { grid: self, offset })
+    }
+
+    #[inline(always)]
+    pub fn set_offset(&mut self, offset: usize, v: u8) {
+        self.bytes[offset] = v;
+    }
+
+    #[inline(always)]
+    pub fn as_slice(&self) -> &[u8] {
+        &self.bytes
     }
 }
 
-pub struct GridPointIterator<'a> {
-    grid: &'a Grid,
-    x: usize,
-    y: usize,
+impl AsRef<[u8]> for Grid {
+    #[inline(always)]
+    fn as_ref(&self) -> &[u8] {
+        &self.bytes
+    }
 }
 
-impl<'a> Iterator for GridPointIterator<'a> {
-    type Item = GridPoint<'a>;
+impl AsMut<[u8]> for Grid {
+    #[inline(always)]
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.bytes
+    }
+}
 
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.y >= self.grid.height {
-            return None;
-        }
+#[derive(Clone, Copy)]
+pub struct GridPoint<'a> {
+    grid: &'a Grid,
+    offset: usize,
+}
 
-        let index = self.y * self.grid.width + self.x;
-        let value = unsafe {
-            // Safety: These indices have been previously checked to be in-range.
-            self.grid.bytes.get_unchecked(index)
-        };
+impl<'a> GridPoint<'a> {
+    #[inline(always)]
+    pub fn offset(self) -> usize {
+        self.offset
+    }
 
-        let point = GridPoint {
-            grid: self.grid,
-            x: self.x,
-            y: self.y,
-            value,
-        };
+    #[inline(always)]
+    pub fn index(self) -> (usize, usize) {
+        (self.x(), self.y())
+    }
 
-        self.x += 1;
-        if self.x >= self.grid.width {
-            self.x = 0;
-            self.y += 1;
-        }
+    #[inline(always)]
+    pub fn x(self) -> usize {
+        self.offset % self.grid.width
+    }
 
-        Some(point)
+    #[inline(always)]
+    pub fn y(self) -> usize {
+        self.offset / self.grid.width
+    }
+
+    #[inline(always)]
+    pub fn value(self) -> u8 {
+        unsafe { *self.grid.bytes.get_unchecked(self.offset) }
+    }
+
+    #[inline(always)]
+    pub fn adjacent_iter(&self) -> impl Iterator<Item = GridPoint<'a>> + 'a {
+        let grid = self.grid;
+        let w = grid.width;
+        let h = grid.height;
+        let x = self.offset % w;
+        let y = self.offset / w;
+
+        let up = y > 0;
+        let down = y + 1 < h;
+        let left = x > 0;
+        let right = x + 1 < w;
+
+        [
+            (up && left).then_some(self.offset - w - 1),
+            up.then_some(self.offset - w),
+            (up && right).then_some(self.offset - w + 1),
+            left.then_some(self.offset - 1),
+            right.then_some(self.offset + 1),
+            (down && left).then_some(self.offset + w - 1),
+            down.then_some(self.offset + w),
+            (down && right).then_some(self.offset + w + 1),
+        ]
+        .into_iter()
+        .flatten()
+        .map(move |offset| GridPoint { grid, offset })
+    }
+}
+
+impl Deref for GridPoint<'_> {
+    type Target = u8;
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        &self.grid.bytes[self.offset]
     }
 }
