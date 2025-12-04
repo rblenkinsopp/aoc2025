@@ -1,29 +1,80 @@
-use aoc2025::{Grid, get_input_as_str};
+use aoc2025::get_input_as_str;
+use memchr::{memchr, memchr_iter};
 
-#[inline(always)]
-fn remove_rolls(grid: &mut Grid) -> usize {
-    let removable: Vec<usize> = grid
-        .filter_iter(b'@')
-        .filter(|p| p.adjacent_iter().filter(|n| n.value() == b'@').count() < 4)
-        .map(|p| p.offset())
-        .collect();
+const SPACE: u8 = b'.';
+const PAPER_ROLL: u8 = b'@';
 
-    let removed = removable.len();
-    removable.into_iter().for_each(|i| grid.set_offset(i, b'.'));
-    removed
+struct PaperRollGrid {
+    data: Vec<u8>,
+    stride: usize,
+}
+
+impl PaperRollGrid {
+    fn from_input(input: &str) -> Self {
+        let bytes = input.as_bytes();
+        let width = memchr(b'\n', bytes).unwrap_or(bytes.len());
+        let input_stride = width + 1;
+        let height = (bytes.len() + 1) / input_stride;
+        let stride = width + 2;
+
+        let mut data = vec![SPACE; stride * (height + 2)];
+
+        // Safety: These ranges have been checked against the input above and must be valid.
+        unsafe {
+            for r in 0..height {
+                let src = r * input_stride;
+                let src = bytes.get_unchecked(src..src + width);
+                let dst = (r + 1) * stride + 1;
+                let dst = data.get_unchecked_mut(dst..dst + width);
+                dst.copy_from_slice(src);
+            }
+        }
+
+        Self { data, stride }
+    }
+
+    #[inline(always)]
+    fn remove_accessible_rolls(&mut self) -> usize {
+        let stride = self.stride;
+        let bytes: &[u8] = &self.data;
+        let mut to_remove = Vec::with_capacity(bytes.len() / 64);
+
+        for i in memchr_iter(PAPER_ROLL, bytes) {
+            unsafe {
+                let mut c = 0u8;
+                c += (*bytes.get_unchecked(i - stride - 1) == PAPER_ROLL) as u8;
+                c += (*bytes.get_unchecked(i - stride) == PAPER_ROLL) as u8;
+                c += (*bytes.get_unchecked(i - stride + 1) == PAPER_ROLL) as u8;
+                c += (*bytes.get_unchecked(i - 1) == PAPER_ROLL) as u8;
+                c += (*bytes.get_unchecked(i + 1) == PAPER_ROLL) as u8;
+                c += (*bytes.get_unchecked(i + stride - 1) == PAPER_ROLL) as u8;
+                c += (*bytes.get_unchecked(i + stride) == PAPER_ROLL) as u8;
+                c += (*bytes.get_unchecked(i + stride + 1) == PAPER_ROLL) as u8;
+                if c < 4 {
+                    to_remove.push(i);
+                }
+            }
+        }
+
+        for &i in &to_remove {
+            unsafe { *self.data.get_unchecked_mut(i) = SPACE; }
+        }
+
+        to_remove.len()
+    }
 }
 
 #[inline(always)]
-fn day4(input: &str) -> (i64, i64) {
-    let mut grid = input.parse().unwrap();
+fn day4(input: &str) -> (usize, usize) {
+    let mut grid = PaperRollGrid::from_input(input);
 
-    let (first, total) = std::iter::repeat_with(|| remove_rolls(&mut grid))
-        .take_while(|&n| n != 0)
-        .fold((None::<usize>, 0usize), |(first, total), n| {
-            (first.or(Some(n)), total + n)
-        });
+    let part_one = grid.remove_accessible_rolls();
+    let part_two = part_one
+        + std::iter::repeat_with(|| grid.remove_accessible_rolls())
+            .take_while(|&n| n != 0)
+            .sum::<usize>();
 
-    (first.unwrap_or(0) as i64, total as i64)
+    (part_one, part_two)
 }
 
 #[inline(always)]
@@ -53,28 +104,28 @@ mod tests {
 
     #[test]
     fn test_remove_rools() {
-        let mut grid = SAMPLE_INPUT.parse().unwrap();
+        let mut grid = PaperRollGrid::from_input(SAMPLE_INPUT);
 
         // Puzzle test cases.
-        assert_eq!(remove_rolls(&mut grid), 13);
-        assert_eq!(remove_rolls(&mut grid), 12);
-        assert_eq!(remove_rolls(&mut grid), 7);
-        assert_eq!(remove_rolls(&mut grid), 5);
-        assert_eq!(remove_rolls(&mut grid), 2);
-        assert_eq!(remove_rolls(&mut grid), 1);
-        assert_eq!(remove_rolls(&mut grid), 1);
-        assert_eq!(remove_rolls(&mut grid), 1);
-        assert_eq!(remove_rolls(&mut grid), 1);
-        assert_eq!(remove_rolls(&mut grid), 0);
+        assert_eq!(grid.remove_accessible_rolls(), 13);
+        assert_eq!(grid.remove_accessible_rolls(), 12);
+        assert_eq!(grid.remove_accessible_rolls(), 7);
+        assert_eq!(grid.remove_accessible_rolls(), 5);
+        assert_eq!(grid.remove_accessible_rolls(), 2);
+        assert_eq!(grid.remove_accessible_rolls(), 1);
+        assert_eq!(grid.remove_accessible_rolls(), 1);
+        assert_eq!(grid.remove_accessible_rolls(), 1);
+        assert_eq!(grid.remove_accessible_rolls(), 1);
+        assert_eq!(grid.remove_accessible_rolls(), 0);
 
         // Extra one to ensure "off the end" behaviour.
-        assert_eq!(remove_rolls(&mut grid), 0);
+        assert_eq!(grid.remove_accessible_rolls(), 0);
     }
 
     #[test]
     fn test_day4() {
-        const SAMPLE_PART1_ANSWER: i64 = 13;
-        const SAMPLE_PART2_ANSWER: i64 = 43;
+        const SAMPLE_PART1_ANSWER: usize = 13;
+        const SAMPLE_PART2_ANSWER: usize = 43;
 
         let (part1_answer, part2_answer) = day4(SAMPLE_INPUT);
         assert_eq!(part1_answer, SAMPLE_PART1_ANSWER, "Part 1 is incorrect");
