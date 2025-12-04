@@ -2,7 +2,8 @@ use aoc2025::get_input_as_str;
 use memchr::{memchr, memchr_iter};
 
 const SPACE: u8 = b'.';
-const PAPER_ROLL: u8 = b'@';
+const ROLL: u8 = b'@';
+const MIN_NEIGHBOURS: u8 = 4;
 
 struct PaperRollGrid {
     data: Vec<u8>,
@@ -34,47 +35,88 @@ impl PaperRollGrid {
     }
 
     #[inline(always)]
-    fn remove_accessible_rolls(&mut self) -> usize {
+    fn remove_accessible_rolls(&mut self) -> (usize, usize) {
         let stride = self.stride;
-        let bytes: &[u8] = &self.data;
-        let mut to_remove = Vec::with_capacity(bytes.len() / 64);
+        let length = self.data.len();
+        let mut degree = vec![0u8; length];
+        let mut current: Vec<usize> = Vec::new();
+        let mut next: Vec<usize> = Vec::new();
 
-        for i in memchr_iter(PAPER_ROLL, bytes) {
-            unsafe {
-                let mut c = 0u8;
-                c += (*bytes.get_unchecked(i - stride - 1) == PAPER_ROLL) as u8;
-                c += (*bytes.get_unchecked(i - stride) == PAPER_ROLL) as u8;
-                c += (*bytes.get_unchecked(i - stride + 1) == PAPER_ROLL) as u8;
-                c += (*bytes.get_unchecked(i - 1) == PAPER_ROLL) as u8;
-                c += (*bytes.get_unchecked(i + 1) == PAPER_ROLL) as u8;
-                c += (*bytes.get_unchecked(i + stride - 1) == PAPER_ROLL) as u8;
-                c += (*bytes.get_unchecked(i + stride) == PAPER_ROLL) as u8;
-                c += (*bytes.get_unchecked(i + stride + 1) == PAPER_ROLL) as u8;
-                if c < 4 {
-                    to_remove.push(i);
+        let bytes: &[u8] = &self.data;
+        current.reserve(bytes.len() / 64);
+
+        unsafe {
+            for i in 0..length {
+                if *bytes.get_unchecked(i) != ROLL {
+                    continue;
+                }
+
+                let up = i - stride;
+                let down = i + stride;
+                let d = (*bytes.get_unchecked(up - 1) == ROLL) as u8
+                    + (*bytes.get_unchecked(up) == ROLL) as u8
+                    + (*bytes.get_unchecked(up + 1) == ROLL) as u8
+                    + (*bytes.get_unchecked(i - 1) == ROLL) as u8
+                    + (*bytes.get_unchecked(i + 1) == ROLL) as u8
+                    + (*bytes.get_unchecked(down - 1) == ROLL) as u8
+                    + (*bytes.get_unchecked(down) == ROLL) as u8
+                    + (*bytes.get_unchecked(down + 1) == ROLL) as u8;
+
+                *degree.get_unchecked_mut(i) = d;
+                if d < MIN_NEIGHBOURS {
+                    current.push(i);
                 }
             }
         }
 
-        for &i in &to_remove {
-            unsafe { *self.data.get_unchecked_mut(i) = SPACE; }
+        let bytes: &mut [u8] = &mut self.data;
+        let mut first = 0;
+        let mut total = 0;
+
+        while !current.is_empty() {
+            if first == 0 {
+                first = current.len();
+            }
+            total += current.len();
+
+            for i in current.drain(..) {
+                unsafe {
+                    *bytes.get_unchecked_mut(i) = SPACE;
+                    let up = i - stride;
+                    let down = i + stride;
+                    let mut decrement_neighbour = |n: usize| {
+                        if *bytes.get_unchecked(n) == ROLL {
+                            let d = degree.get_unchecked_mut(n);
+                            if *d == MIN_NEIGHBOURS {
+                                next.push(n);
+                            }
+                            *d -= 1;
+                        }
+                    };
+
+                    decrement_neighbour(up - 1);
+                    decrement_neighbour(up);
+                    decrement_neighbour(up + 1);
+                    decrement_neighbour(i - 1);
+                    decrement_neighbour(i + 1);
+                    decrement_neighbour(down - 1);
+                    decrement_neighbour(down);
+                    decrement_neighbour(down + 1);
+                }
+            }
+
+            std::mem::swap(&mut current, &mut next);
+            next.clear();
         }
 
-        to_remove.len()
+        (first, total)
     }
 }
 
 #[inline(always)]
 fn day4(input: &str) -> (usize, usize) {
     let mut grid = PaperRollGrid::from_input(input);
-
-    let part_one = grid.remove_accessible_rolls();
-    let part_two = part_one
-        + std::iter::repeat_with(|| grid.remove_accessible_rolls())
-            .take_while(|&n| n != 0)
-            .sum::<usize>();
-
-    (part_one, part_two)
+    grid.remove_accessible_rolls()
 }
 
 #[inline(always)]
@@ -89,7 +131,9 @@ mod tests {
     use super::*;
     use indoc::indoc;
 
-    const SAMPLE_INPUT: &str = indoc! {"
+    #[test]
+    fn test_day4() {
+        const SAMPLE_INPUT: &str = indoc! {"
             ..@@.@@@@.
             @@@.@.@.@@
             @@@@@.@.@@
@@ -101,29 +145,6 @@ mod tests {
             .@@@@@@@@.
             @.@.@@@.@.
         "};
-
-    #[test]
-    fn test_remove_rools() {
-        let mut grid = PaperRollGrid::from_input(SAMPLE_INPUT);
-
-        // Puzzle test cases.
-        assert_eq!(grid.remove_accessible_rolls(), 13);
-        assert_eq!(grid.remove_accessible_rolls(), 12);
-        assert_eq!(grid.remove_accessible_rolls(), 7);
-        assert_eq!(grid.remove_accessible_rolls(), 5);
-        assert_eq!(grid.remove_accessible_rolls(), 2);
-        assert_eq!(grid.remove_accessible_rolls(), 1);
-        assert_eq!(grid.remove_accessible_rolls(), 1);
-        assert_eq!(grid.remove_accessible_rolls(), 1);
-        assert_eq!(grid.remove_accessible_rolls(), 1);
-        assert_eq!(grid.remove_accessible_rolls(), 0);
-
-        // Extra one to ensure "off the end" behaviour.
-        assert_eq!(grid.remove_accessible_rolls(), 0);
-    }
-
-    #[test]
-    fn test_day4() {
         const SAMPLE_PART1_ANSWER: usize = 13;
         const SAMPLE_PART2_ANSWER: usize = 43;
 
