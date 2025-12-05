@@ -1,5 +1,5 @@
 use aoc2025::get_input_as_str;
-use memchr::{memchr, memchr_iter};
+use memchr::memchr;
 
 const SPACE: u8 = b'.';
 const ROLL: u8 = b'@';
