@@ -1,15 +1,11 @@
 #![feature(slice_swap_unchecked)]
 
-use aoc2025::{get_input_as_str, parse_range, split_input_parts};
+use aoc2025::get_input_as_str;
 use atoi::atoi;
+use memchr::{memchr, memmem::find};
 
 #[inline(always)]
-fn parse_ingredient(ingredient: &str) -> i64 {
-    atoi(ingredient.as_bytes()).unwrap()
-}
-
-#[inline(always)]
-fn merge_ranges(mut ranges: Vec<(i64, i64)>) -> (Vec<(i64, i64)>, usize) {
+fn merge_ranges(mut ranges: Vec<(u64, u64)>) -> (Vec<(u64, u64)>, usize) {
     ranges.sort_unstable_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
 
     let mut write_index = 0;
@@ -41,7 +37,7 @@ fn merge_ranges(mut ranges: Vec<(i64, i64)>) -> (Vec<(i64, i64)>, usize) {
 }
 
 #[inline(always)]
-fn count_in_ranges_sorted(sorted_values: &[i64], ranges: &[(i64, i64)]) -> usize {
+fn count_in_ranges(sorted_values: &Vec<u64>, ranges: &Vec<(u64, u64)>) -> usize {
     let mut range_index = 0;
     let mut count = 0;
     let ranges_len = ranges.len();
@@ -63,17 +59,48 @@ fn count_in_ranges_sorted(sorted_values: &[i64], ranges: &[(i64, i64)]) -> usize
 }
 
 #[inline(always)]
+fn parse_input(input: &str) -> (Vec<(u64, u64)>, Vec<u64>) {
+    let mut fresh_ranges: Vec<(u64, u64)> = Vec::with_capacity(200);
+    let mut ingredients: Vec<u64> = Vec::with_capacity(1000);
+    let bytes = input.as_bytes();
+    let split = find(bytes, b"\n\n").unwrap();
+
+    unsafe {
+        let ranges_bytes = bytes.get_unchecked(..split);
+        let ingredients_bytes = bytes.get_unchecked(split + 2..);
+
+        let mut i = 0;
+        while i < ranges_bytes.len() {
+            let rest = ranges_bytes.get_unchecked(i..);
+            let n = memchr(b'\n', rest).unwrap_or(rest.len());
+            let line = rest.get_unchecked(..n);
+            let dash = memchr(b'-', line).unwrap();
+            let a: u64 = atoi(&line[..dash]).unwrap();
+            let b: u64 = atoi(&line[dash + 1..]).unwrap();
+            fresh_ranges.push(if a <= b { (a, b) } else { (b, a) });
+            i += n + 1;
+        }
+
+        let mut i = 0;
+        while i < ingredients_bytes.len() {
+            let rest = ingredients_bytes.get_unchecked(i..);
+            let n = memchr(b'\n', rest).unwrap_or(rest.len());
+            let line = rest.get_unchecked(..n);
+            ingredients.push(atoi(line).unwrap());
+
+            i += n + 1;
+        }
+    }
+
+    (fresh_ranges, ingredients)
+}
+
+#[inline(always)]
 fn day5(input: &str) -> (usize, usize) {
-    let (fresh_ranges, ingredients) = split_input_parts(input);
-
-    // Part 2 and ranges for part 1.
-    let (fresh_ranges, part_two) = merge_ranges(fresh_ranges.lines().map(parse_range).collect());
-
-    // Part 1.
-    let mut ingredient_ids: Vec<i64> = ingredients.lines().map(parse_ingredient).collect();
+    let (fresh_ranges, mut ingredient_ids) = parse_input(input);
+    let (fresh_ranges, part_two) = merge_ranges(fresh_ranges);
     ingredient_ids.sort_unstable();
-    let part_one = count_in_ranges_sorted(&ingredient_ids, &fresh_ranges);
-
+    let part_one = count_in_ranges(&ingredient_ids, &fresh_ranges);
     (part_one, part_two)
 }
 
