@@ -1,12 +1,12 @@
-use aoc2025::get_input_as_string;
+use std::fs;
+use aoc2025::get_input_filename;
 
 const DIAL_POSITION_START: i32 = 50;
 const DIAL_POSITION_COUNT: i32 = 100;
 const OFFSET: i32 = 1000000000;
 
 #[inline(always)]
-fn day1(input: &str) -> (i32, i32) {
-    let bytes = input.as_bytes();
+fn day1(bytes: &[u8]) -> (i32, i32) {
     let len = bytes.len();
 
     let mut abs_pos = OFFSET + DIAL_POSITION_START;
@@ -56,7 +56,8 @@ fn day1(input: &str) -> (i32, i32) {
 
 #[inline(always)]
 fn main() {
-    let (p1, p2) = day1(get_input_as_string().as_str());
+    let input = unsafe { fs::read(get_input_filename()).unwrap_unchecked() };
+    let (p1, p2) = day1(&input);
     println!("{p1}\n{p2}");
 }
 
@@ -82,14 +83,14 @@ mod tests {
         const SAMPLE_PART1_ANSWER: i32 = 3;
         const SAMPLE_PART2_ANSWER: i32 = 6;
 
-        let (part1_answer, part2_answer) = day1(SAMPLE_INPUT);
+        let (part1_answer, part2_answer) = day1(SAMPLE_INPUT.as_bytes());
         assert_eq!(part1_answer, SAMPLE_PART1_ANSWER);
         assert_eq!(part2_answer, SAMPLE_PART2_ANSWER);
     }
 
     #[test]
     fn test_day1_actual() {
-        const ACTUAL_INPUT: &str = include_str!("../../data/inputs/day01.txt");
+        const ACTUAL_INPUT: &[u8] = include_bytes!("../../data/inputs/day01.txt");
         const ACTUAL_ANSWERS: &str = include_str!("../../data/answers/day01.txt");
         let answers = ACTUAL_ANSWERS.split_once("\n").unwrap();
         let answers = (
