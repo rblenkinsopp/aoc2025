@@ -90,6 +90,17 @@ mod tests {
     use indoc::indoc;
 
     #[test]
+    fn test_merge_ranges() {
+        // Simple example.
+        let test_ranges = vec![(10, 20), (0, 10), (30, 40)];
+        assert_eq!(merge_ranges(test_ranges), (vec![(0, 20), (30, 40)], 32));
+
+        // Actual sample test input.
+        let test_ranges = vec![(3, 5), (10, 14), (16, 20)];
+        assert_eq!(merge_ranges(test_ranges), (vec![(3, 5), (10, 20)], 14));
+    }
+
+    #[test]
     fn test_day5() {
         const SAMPLE_INPUT: &str = indoc! {"
             3-5
