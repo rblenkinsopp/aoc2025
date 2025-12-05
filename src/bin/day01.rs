@@ -23,15 +23,15 @@ fn day1(bytes: &[u8]) -> (i32, i32) {
             i += 1;
             steps = (*bytes.get_unchecked(i) - b'0') as i32;
             i += 1;
-            let d = (*bytes.get_unchecked(i)).wrapping_sub(b'0');
-            if d <= 9 {
-                steps = steps * 10 + d as i32;
+            let b1 = *bytes.get_unchecked(i);
+            if b1 != b'\n' {
+                steps = steps * 10 + (b1 - b'0') as i32;
                 i += 1;
-            }
-            let d = (*bytes.get_unchecked(i)).wrapping_sub(b'0');
-            if d <= 9 {
-                steps = steps * 10 + d as i32;
-                i += 1;
+                let b2 = *bytes.get_unchecked(i);
+                if b2 != b'\n' {
+                    steps = steps * 10 + (b2 - b'0') as i32;
+                    i += 1;
+                }
             }
             i += 1;
 
