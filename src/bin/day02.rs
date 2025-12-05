@@ -1,4 +1,6 @@
-use aoc2025::{get_input_as_string, parse_range};
+use aoc2025::get_input_as_string;
+use atoi::atoi;
+use memchr::memchr3;
 
 #[inline(always)]
 pub fn pow10(x: u64) -> u64 {
@@ -58,8 +60,9 @@ fn sum_invalid_range(start: u64, end: u64) -> (u64, u64) {
     let mut part_one: u64 = 0;
     let mut part_two: u64 = 0;
 
-    for n_digits in digits(start)..=digits(end) {
-        let n_digits = n_digits as u64;
+    let start_digits = digits(start) as u64;
+    let end_digits = digits(end) as u64;
+    for n_digits in start_digits..=end_digits {
         let lo = start.max(pow10(n_digits - 1));
         let hi = end.min(pow10(n_digits) - 1);
 
@@ -86,13 +89,34 @@ fn sum_invalid_range(start: u64, end: u64) -> (u64, u64) {
 }
 
 #[inline(always)]
+fn parse_u64_till_seperator(bytes: &[u8], i: &mut usize) -> u64 {
+    let start = *i;
+    let rel = memchr3(b'-', b',', b'\n', &bytes[*i..]).unwrap_or(bytes.len() - *i);
+    *i += rel + 1;
+    atoi(&bytes[start..*i]).unwrap()
+}
+
+#[inline(always)]
 fn day2(input: &str) -> (u64, u64) {
-    input
-        .lines()
-        .flat_map(|line| line.split(','))
-        .map(parse_range)
-        .map(|(start, end)| sum_invalid_range(start as u64, end as u64))
-        .fold((0, 0), |a, b| (a.0 + b.0, a.1 + b.1))
+    let bytes = input.as_bytes();
+    let mut i = 0;
+    let mut part_one = 0;
+    let mut part_two = 0;
+
+    while i < bytes.len() {
+        let start = parse_u64_till_seperator(bytes, &mut i);
+        let end = parse_u64_till_seperator(bytes, &mut i);
+
+        let (p1, p2) = sum_invalid_range(start, end);
+        part_one += p1;
+        part_two += p2;
+
+        if i >= bytes.len() {
+            break;
+        }
+    }
+
+    (part_one, part_two)
 }
 
 #[inline(always)]
