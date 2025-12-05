@@ -1,5 +1,4 @@
 use aoc2025::{get_input_as_string, parse_range};
-use rayon::prelude::*;
 
 #[inline(always)]
 pub fn pow10(x: u64) -> u64 {
@@ -27,19 +26,19 @@ fn digits(x: u64) -> usize {
     (x.ilog10() + 1) as usize
 }
 
-const DIVISORS: [&[u64]; 12] = [
-    &[],
-    &[],
-    &[],
-    &[111],
-    &[],
-    &[11111],
-    &[10101],
-    &[1111111],
-    &[],
-    &[1001001],
-    &[101010101],
-    &[11111111111],
+const DIVISORS: [u64; 12] = [
+    0,
+    0,
+    0,
+    111,
+    0,
+    11111,
+    10101,
+    1111111,
+    0,
+    1001001,
+    101010101,
+    11111111111,
 ];
 
 #[inline(always)]
@@ -60,17 +59,18 @@ fn sum_invalid_range(start: u64, end: u64) -> (u64, u64) {
     let mut part_two: u64 = 0;
 
     for n_digits in digits(start)..=digits(end) {
-        let lo = start.max(pow10((n_digits - 1) as u64));
-        let hi = end.min(pow10(n_digits as u64) - 1);
+        let n_digits = n_digits as u64;
+        let lo = start.max(pow10(n_digits - 1));
+        let hi = end.min(pow10(n_digits) - 1);
 
         if n_digits % 2 == 0 {
-            let div = pow10((n_digits / 2) as u64) + 1;
+            let div = pow10(n_digits / 2) + 1;
             let invalid = sum_multiples(div, lo, hi);
             part_one += invalid;
             part_two += invalid;
         }
 
-        for &div in DIVISORS[n_digits] {
+        if let div @ 1.. = DIVISORS[n_digits as usize] {
             part_two += sum_multiples(div, lo, hi);
         }
 
@@ -87,18 +87,12 @@ fn sum_invalid_range(start: u64, end: u64) -> (u64, u64) {
 
 #[inline(always)]
 fn day2(input: &str) -> (u64, u64) {
-    // Collect the ranges we need to check for valid ids.
-    let ranges: Vec<_> = input
+    input
         .lines()
         .flat_map(|line| line.split(','))
         .map(parse_range)
-        .collect();
-
-    // Distribute the work over all cores and reduce the result.
-    ranges
-        .par_iter()
-        .map(|&(start, end)| sum_invalid_range(start as u64, end as u64))
-        .reduce(|| (0, 0), |a, b| (a.0 + b.0, a.1 + b.1))
+        .map(|(start, end)| sum_invalid_range(start as u64, end as u64))
+        .fold((0, 0), |a, b| (a.0 + b.0, a.1 + b.1))
 }
 
 #[inline(always)]
