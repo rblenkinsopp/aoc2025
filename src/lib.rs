@@ -1,3 +1,4 @@
+use atoi::atoi;
 use memchr::{memchr, memchr_iter};
 use memmap2::Mmap;
 use std::alloc::System;
@@ -30,19 +31,26 @@ pub fn get_input_as_string() -> String {
     fs::read_to_string(get_input_filename()).expect("Could not open input file")
 }
 
-/// Gets the two different parts of the puzzle input as strings
-#[inline]
-pub fn get_two_part_input_as_strings() -> (String, String) {
-    const DOUBLE_NEWLINE: &str = "\n\n";
+/// Gets the two different parts of the puzzle input as d
+#[inline(always)]
+pub fn split_input_parts(input: &str) -> (&str, &str) {
+    let bytes = input.as_bytes();
+    let length = bytes.len();
 
-    let mut input = get_input_as_string();
-    let split_pos = input
-        .find(DOUBLE_NEWLINE)
-        .expect("Puzzle input is not seperated into two parts");
-    let second = input.split_off(split_pos + DOUBLE_NEWLINE.len());
-    input.truncate(split_pos);
+    let mut i = 0;
+    while i < length {
+        if let Some(rel) = memchr(b'\n', unsafe { bytes.get_unchecked(i..) }) {
+            let p = i + rel;
+            if p + 1 < length && unsafe { *bytes.get_unchecked(p + 1) } == b'\n' {
+                let a = unsafe { std::str::from_utf8_unchecked(bytes.get_unchecked(..p)) };
+                let b = unsafe { std::str::from_utf8_unchecked(bytes.get_unchecked(p + 2..)) };
+                return (a, b);
+            }
+            i = p + 1;
+        }
+    }
 
-    (input, second)
+    panic!("Puzzle input is not seperated into two parts");
 }
 
 #[inline(always)]
@@ -56,6 +64,16 @@ pub fn get_input_as_bytes() -> &'static [u8] {
         })
         .as_ref()
     }
+}
+
+#[inline(always)]
+/// Parse lines of the form "1234567898-123456789"
+pub fn parse_range(range: &str) -> (i64, i64) {
+    let (start, end) = range.split_once('-').unwrap();
+    (
+        atoi(start.as_bytes()).unwrap(),
+        atoi(end.as_bytes()).unwrap(),
+    )
 }
 
 #[inline(always)]

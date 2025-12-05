@@ -1,5 +1,4 @@
-use aoc2025::get_input_as_string;
-use atoi::atoi;
+use aoc2025::{get_input_as_string, parse_range};
 use rayon::prelude::*;
 
 const PERIOD_CANDIDATES: [&[usize]; 12] = [
@@ -16,15 +15,6 @@ const PERIOD_CANDIDATES: [&[usize]; 12] = [
     &[1, 2], // 10 (ignore half-period 5 as already checked)
     &[1],    // 11
 ];
-
-#[inline(always)]
-fn parse_range(range: &str) -> (i64, i64) {
-    let (start, end) = range.split_once('-').unwrap();
-    (
-        atoi(start.as_bytes()).unwrap(),
-        atoi(end.as_bytes()).unwrap(),
-    )
-}
 
 #[inline(always)]
 fn is_invalid_product_id_bytes(bytes: &[u8]) -> (bool, bool) {
