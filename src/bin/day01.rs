@@ -3,14 +3,12 @@ use aoc2025::get_input_filename;
 
 const DIAL_POSITION_START: i32 = 50;
 const DIAL_POSITION_COUNT: i32 = 100;
-const OFFSET: i32 = 1000000000;
 
 #[inline(always)]
 fn day1(bytes: &[u8]) -> (i32, i32) {
     let len = bytes.len();
 
-    let mut abs_pos = OFFSET + DIAL_POSITION_START;
-    let mut remainder = abs_pos % DIAL_POSITION_COUNT;
+    let mut remainder = DIAL_POSITION_START;
     let mut part_one = 0;
     let mut part_two = 0;
     let mut i = 0;
@@ -35,18 +33,20 @@ fn day1(bytes: &[u8]) -> (i32, i32) {
             }
             i += 1;
 
-            // Part 2.
             if is_right != 0 {
-                part_two += (steps + remainder) / DIAL_POSITION_COUNT;
+                let sum = steps + remainder;
+                let crosses = sum / DIAL_POSITION_COUNT;
+                part_two += crosses;
+                remainder = sum - crosses * DIAL_POSITION_COUNT;
             } else {
                 let to_next = (remainder != 0) as i32 * (DIAL_POSITION_COUNT - remainder);
-                part_two += (steps + to_next) / DIAL_POSITION_COUNT;
+                let crosses = (steps + to_next) / DIAL_POSITION_COUNT;
+                part_two += crosses;
+                remainder = remainder - steps + crosses * DIAL_POSITION_COUNT;
+                remainder += (remainder < 0) as i32 * DIAL_POSITION_COUNT;
+                remainder -= (remainder == DIAL_POSITION_COUNT) as i32 * DIAL_POSITION_COUNT;
             }
 
-            // Part 1.
-            let delta = (is_right * 2 - 1) * steps;
-            abs_pos += delta;
-            remainder = abs_pos % DIAL_POSITION_COUNT;
             part_one += (remainder == 0) as i32;
         }
     }

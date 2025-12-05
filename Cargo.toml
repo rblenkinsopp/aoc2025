@@ -16,9 +16,7 @@ panic = "abort"
 
 [dependencies]
 atoi = "2.0.0"
-itoa = "1.0.15"
 memmap2 = "0.9.9"
-rayon = "1.11.0"
 memchr = "2.7.6"
 argminmax = "0.6.3"
 
