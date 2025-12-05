@@ -9,14 +9,11 @@ fn parse_ingredient(ingredient: &str) -> i64 {
 }
 
 #[inline(always)]
-fn merge_ranges(mut ranges: Vec<(i64, i64)>) -> Vec<(i64, i64)> {
-    if ranges.len() <= 1 {
-        return ranges;
-    }
-
+fn merge_ranges(mut ranges: Vec<(i64, i64)>) -> (Vec<(i64, i64)>, usize) {
     ranges.sort_unstable_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
 
-    let mut write_index = 0usize;
+    let mut write_index = 0;
+    let mut total_length = 0;
 
     unsafe {
         for read_index in 1..ranges.len() {
@@ -27,23 +24,27 @@ fn merge_ranges(mut ranges: Vec<(i64, i64)>) -> Vec<(i64, i64)> {
                 let a_end = a_end.max(b_end);
                 *ranges.get_unchecked_mut(write_index) = (a_start, a_end);
             } else {
+                total_length += (a_end - a_start + 1) as usize;
                 write_index += 1;
                 if write_index != read_index {
                     ranges.swap_unchecked(write_index, read_index);
                 }
             }
         }
+
+        let (a_start, a_end) = *ranges.get_unchecked(write_index);
+        total_length += (a_end - a_start + 1) as usize;
     }
 
     ranges.truncate(write_index + 1);
-    ranges
+    (ranges, total_length)
 }
 
 #[inline(always)]
 fn day5(input: &str) -> (usize, usize) {
     let (fresh_ranges, ingredients) = split_input_parts(input);
 
-    let fresh_ranges: Vec<(i64, i64)> =
+    let (fresh_ranges, part_two) =
         merge_ranges(fresh_ranges.lines().map(parse_range).collect());
 
     let fresh = |x: i64| {
@@ -56,11 +57,6 @@ fn day5(input: &str) -> (usize, usize) {
         .map(parse_ingredient)
         .filter(|&x| fresh(x))
         .count();
-
-    let part_two: usize = fresh_ranges
-        .iter()
-        .map(|&(start, end)| (end - start + 1) as usize)
-        .sum();
 
     (part_one, part_two)
 }
