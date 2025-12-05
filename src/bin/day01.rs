@@ -1,49 +1,54 @@
-use aoc2025::get_input_as_str;
-use atoi::atoi;
+use aoc2025::get_input_as_string;
 
-const DIAL_POSITION_START: i16 = 50;
-const DIAL_POSITION_COUNT: i16 = 100;
-
-#[inline(always)]
-fn rotate_dial(position: i16, rotation: i16) -> (i16, i16) {
-    let new_positon = position + rotation;
-    let mut quotient = new_positon / DIAL_POSITION_COUNT;
-    let mut remainder = new_positon - quotient * DIAL_POSITION_COUNT;
-
-    if remainder < 0 {
-        quotient -= 1;
-        remainder += DIAL_POSITION_COUNT;
-    }
-
-    let times_past_zero = if rotation > 0 {
-        quotient
-    } else if rotation < 0 {
-        (position > 0) as i16 - quotient - (remainder > 0) as i16
-    } else {
-        0
-    };
-
-    (remainder, times_past_zero)
-}
+const DIAL_POSITION_START: i32 = 50;
+const DIAL_POSITION_COUNT: i32 = 100;
+const OFFSET: i32 = 1000000000;
 
 #[inline(always)]
-fn parse_rotation(bytes: &[u8]) -> i16 {
-    let sign = ((bytes[0] == b'R') as i16) * 2 - 1;
-    sign * atoi::<i16>(&bytes[1..]).unwrap()
-}
+fn day1(input: &str) -> (i32, i32) {
+    let bytes = input.as_bytes();
+    let len = bytes.len();
 
-#[inline(always)]
-fn day1(input: &str) -> (i16, i16) {
-    let mut position = DIAL_POSITION_START;
+    let mut abs_pos = OFFSET + DIAL_POSITION_START;
+    let mut remainder = abs_pos % DIAL_POSITION_COUNT;
     let mut part_one = 0;
     let mut part_two = 0;
+    let mut i = 0;
 
-    for line in input.lines() {
-        let rotation = parse_rotation(line.as_bytes());
-        let (new_position, times_past_zero) = rotate_dial(position, rotation);
-        part_one += (new_position == 0) as i16;
-        part_two += times_past_zero;
-        position = new_position;
+    while i < len {
+        let is_right: i32;
+        let mut steps: i32;
+        unsafe {
+            is_right = (*bytes.get_unchecked(i) == b'R') as i32;
+            i += 1;
+            steps = (*bytes.get_unchecked(i) - b'0') as i32;
+            i += 1;
+            let d = (*bytes.get_unchecked(i)).wrapping_sub(b'0');
+            if d <= 9 {
+                steps = steps * 10 + d as i32;
+                i += 1;
+            }
+            let d = (*bytes.get_unchecked(i)).wrapping_sub(b'0');
+            if d <= 9 {
+                steps = steps * 10 + d as i32;
+                i += 1;
+            }
+            i += 1;
+
+            // Part 2.
+            if is_right != 0 {
+                part_two += (steps + remainder) / DIAL_POSITION_COUNT;
+            } else {
+                let to_next = (remainder != 0) as i32 * (DIAL_POSITION_COUNT - remainder);
+                part_two += (steps + to_next) / DIAL_POSITION_COUNT;
+            }
+
+            // Part 1.
+            let delta = (is_right * 2 - 1) * steps;
+            abs_pos += delta;
+            remainder = abs_pos % DIAL_POSITION_COUNT;
+            part_one += (remainder == 0) as i32;
+        }
     }
 
     (part_one, part_two)
@@ -51,7 +56,7 @@ fn day1(input: &str) -> (i16, i16) {
 
 #[inline(always)]
 fn main() {
-    let (p1, p2) = day1(get_input_as_str());
+    let (p1, p2) = day1(get_input_as_string().as_str());
     println!("{p1}\n{p2}");
 }
 
@@ -61,32 +66,7 @@ mod tests {
     use indoc::indoc;
 
     #[test]
-    fn test_rotate_dial() {
-        // Sample input operations from the puzzle description.
-        assert_eq!(rotate_dial(50, -68), (82, 1));
-        assert_eq!(rotate_dial(82, -30), (52, 0));
-        assert_eq!(rotate_dial(52, 48), (0, 1));
-        assert_eq!(rotate_dial(0, -5), (95, 0));
-        assert_eq!(rotate_dial(95, 60), (55, 1));
-        assert_eq!(rotate_dial(55, -55), (0, 1));
-        assert_eq!(rotate_dial(0, -1), (99, 0));
-        assert_eq!(rotate_dial(99, -99), (0, 1));
-        assert_eq!(rotate_dial(0, 14), (14, 0));
-        assert_eq!(rotate_dial(14, -82), (32, 1));
-
-        // Additional tests for edge cases.
-        assert_eq!(rotate_dial(0, 100), (0, 1));
-        assert_eq!(rotate_dial(99, 1), (0, 1));
-        assert_eq!(rotate_dial(0, -1), (99, 0));
-        assert_eq!(rotate_dial(50, 100), (50, 1));
-        assert_eq!(rotate_dial(50, 1000), (50, 10));
-        assert_eq!(rotate_dial(50, -100), (50, 1));
-        assert_eq!(rotate_dial(50, -1000), (50, 10));
-    }
-
-    #[test]
     fn test_day1() {
-        // Final answer tests from the puzzle description.
         const SAMPLE_INPUT: &str = indoc! {"
             L68
             L30
@@ -99,11 +79,23 @@ mod tests {
             R14
             L82
         "};
-        const SAMPLE_PART1_ANSWER: i16 = 3;
-        const SAMPLE_PART2_ANSWER: i16 = 6;
+        const SAMPLE_PART1_ANSWER: i32 = 3;
+        const SAMPLE_PART2_ANSWER: i32 = 6;
 
         let (part1_answer, part2_answer) = day1(SAMPLE_INPUT);
-        assert_eq!(part1_answer, SAMPLE_PART1_ANSWER, "Part 1 is incorrect");
-        assert_eq!(part2_answer, SAMPLE_PART2_ANSWER, "Part 2 is incorrect");
+        assert_eq!(part1_answer, SAMPLE_PART1_ANSWER);
+        assert_eq!(part2_answer, SAMPLE_PART2_ANSWER);
+    }
+
+    #[test]
+    fn test_day1_actual() {
+        const ACTUAL_INPUT: &str = include_str!("../../data/inputs/day01.txt");
+        const ACTUAL_ANSWERS: &str = include_str!("../../data/answers/day01.txt");
+        let answers = ACTUAL_ANSWERS.split_once("\n").unwrap();
+        let answers = (
+            str::parse::<i32>(answers.0).unwrap(),
+            str::parse::<i32>(answers.1).unwrap(),
+        );
+        assert_eq!(day1(ACTUAL_INPUT), answers);
     }
 }
