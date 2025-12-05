@@ -41,22 +41,38 @@ fn merge_ranges(mut ranges: Vec<(i64, i64)>) -> (Vec<(i64, i64)>, usize) {
 }
 
 #[inline(always)]
+fn count_in_ranges_sorted(sorted_values: &[i64], ranges: &[(i64, i64)]) -> usize {
+    let mut range_index = 0;
+    let mut count = 0;
+    let ranges_len = ranges.len();
+
+    // Safety: Range values have already been checked.
+    unsafe {
+        for &x in sorted_values {
+            while ranges.get_unchecked(range_index).1 < x {
+                range_index += 1;
+                if range_index == ranges_len {
+                    return count;
+                }
+            }
+
+            count += (x >= ranges.get_unchecked(range_index).0) as usize;
+        }
+    }
+    count
+}
+
+#[inline(always)]
 fn day5(input: &str) -> (usize, usize) {
     let (fresh_ranges, ingredients) = split_input_parts(input);
 
-    let (fresh_ranges, part_two) =
-        merge_ranges(fresh_ranges.lines().map(parse_range).collect());
+    // Part 2 and ranges for part 1.
+    let (fresh_ranges, part_two) = merge_ranges(fresh_ranges.lines().map(parse_range).collect());
 
-    let fresh = |x: i64| {
-        let i = fresh_ranges.partition_point(|&(_, end)| end < x);
-        i < fresh_ranges.len() && x >= fresh_ranges[i].0
-    };
-
-    let part_one = ingredients
-        .lines()
-        .map(parse_ingredient)
-        .filter(|&x| fresh(x))
-        .count();
+    // Part 1.
+    let mut ingredient_ids: Vec<i64> = ingredients.lines().map(parse_ingredient).collect();
+    ingredient_ids.sort_unstable();
+    let part_one = count_in_ranges_sorted(&ingredient_ids, &fresh_ranges);
 
     (part_one, part_two)
 }
