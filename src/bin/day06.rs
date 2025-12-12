@@ -5,8 +5,8 @@ use std::cmp::PartialEq;
 
 #[derive(Eq, PartialEq)]
 enum Operator {
-    ADD,
-    MULTIPLY,
+    Add,
+    Multiply,
 }
 
 #[inline(always)]
@@ -26,8 +26,8 @@ fn day6(input: &str) -> (i64, i64) {
     let ops: Vec<Operator> = ops
         .iter()
         .map(|op| match op.as_bytes()[0] {
-            b'+' => Operator::ADD,
-            b'*' => Operator::MULTIPLY,
+            b'+' => Operator::Add,
+            b'*' => Operator::Multiply,
             _ => panic!("Unsupported operator"),
         })
         .collect();
@@ -35,8 +35,8 @@ fn day6(input: &str) -> (i64, i64) {
         .iter()
         .enumerate()
         .map(|(i, op)| match op {
-            Operator::ADD => args.iter().map(|row| row[i]).sum::<i64>(),
-            Operator::MULTIPLY => args.iter().map(|row| row[i]).product::<i64>(),
+            Operator::Add => args.iter().map(|row| row[i]).sum::<i64>(),
+            Operator::Multiply => args.iter().map(|row| row[i]).product::<i64>(),
         })
         .sum();
 
@@ -70,7 +70,7 @@ fn day6(input: &str) -> (i64, i64) {
                         total += if mul {
                             group.iter().product::<i64>()
                         } else {
-                            group.iter().sum()
+                            group.iter().sum::<i64>()
                         };
                         group.clear();
                         mul = false;
@@ -122,15 +122,15 @@ mod tests {
         assert_eq!(part2_answer, SAMPLE_PART2_ANSWER);
     }
 
-    // #[test]
-    // fn test_day6_actual() {
-    //     const ACTUAL_INPUT: &[u8] = include_bytes!("../../data/inputs/day01.txt");
-    //     const ACTUAL_ANSWERS: &str = include_str!("../../data/answers/day01.txt");
-    //     let answers = ACTUAL_ANSWERS.split_once("\n").unwrap();
-    //     let answers = (
-    //         str::parse::<i64>(answers.0).unwrap(),
-    //         str::parse::<i64>(answers.1).unwrap(),
-    //     );
-    //     assert_eq!(day6(ACTUAL_INPUT), answers);
-    // }
+    #[test]
+    fn test_day6_actual() {
+        const ACTUAL_INPUT: &str = include_str!("../../data/inputs/day06.txt");
+        const ACTUAL_ANSWERS: &str = include_str!("../../data/answers/day06.txt");
+        let answers = ACTUAL_ANSWERS.split_once("\n").unwrap();
+        let answers = (
+            str::parse::<i64>(answers.0).unwrap(),
+            str::parse::<i64>(answers.1).unwrap(),
+        );
+        assert_eq!(day6(ACTUAL_INPUT), answers);
+    }
 }
