@@ -108,6 +108,11 @@ impl<'a> UniformInputIterator<'a> {
             offset: 0,
         }
     }
+
+    #[inline(always)]
+    pub fn line_length(&self) -> usize {
+        self.line_length
+    }
 }
 
 impl<'a> Iterator for UniformInputIterator<'a> {
