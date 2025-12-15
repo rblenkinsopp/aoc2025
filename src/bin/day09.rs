@@ -2,6 +2,7 @@ use aoc2025::get_input_as_str;
 use atoi::atoi;
 use itertools::Itertools;
 use rayon::prelude::*;
+use std::cmp::Reverse;
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 struct Point2D {
@@ -82,11 +83,10 @@ fn day9(input: &str) -> (i64, i64) {
         .tuple_combinations()
         .map(Rect2D::from_corner_pair)
         .collect();
-    rects.par_sort_unstable_by_key(|r| r.area);
-    rects.reverse();
+    rects.par_sort_unstable_by_key(|r| Reverse(r.area));
 
     // Part one: Largest area rect.
-    let part_one = rects.first().unwrap().area;
+    let part_one = rects[0].area;
 
     // Part two: Calculate the rects which don't overlap the edges.
     let part_two = rects
