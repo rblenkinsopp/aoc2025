@@ -20,12 +20,11 @@ impl Point3D {
 }
 
 #[inline(always)]
-fn straight_line_distance(a: &Point3D, b: &Point3D) -> i64 {
+fn squared_distance(a: &Point3D, b: &Point3D) -> i64 {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
     let dz = a.z - b.z;
-
-    (dx.pow(2) + dy.pow(2) + dz.pow(2)).isqrt()
+    dx * dx + dy * dy + dz * dz
 }
 
 #[inline(always)]
@@ -40,7 +39,7 @@ fn day8(input: &str, edge_limit: usize) -> (i64, i64) {
         for j in (i + 1)..num_points {
             let point_a = &points[i];
             let point_b = &points[j];
-            edges.push((straight_line_distance(point_a, point_b), i, j));
+            edges.push((squared_distance(point_a, point_b), i, j));
         }
     }
     edges.sort_unstable_by_key(|(distance, _, _)| *distance);
