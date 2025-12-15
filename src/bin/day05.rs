@@ -106,7 +106,7 @@ fn parse_input(input: &str) -> (Vec<(u64, u64)>, Vec<u64>) {
 
 #[inline(always)]
 fn day5(input: &str) -> (usize, usize) {
-    let (fresh_ranges, mut ingredient_ids) = parse_input(input);
+    let (fresh_ranges, ingredient_ids) = parse_input(input);
     let (fresh_ranges, part_two) = merge_ranges(fresh_ranges);
     let part_one = count_in_ranges(&ingredient_ids, &fresh_ranges);
     (part_one, part_two)
