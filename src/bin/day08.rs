@@ -1,5 +1,6 @@
 use aoc2025::get_input_as_str;
 use atoi::atoi;
+use rayon::prelude::*;
 use union_find::{QuickFindUf, UnionBySize, UnionFind};
 
 #[derive(Eq, PartialEq)]
@@ -42,7 +43,7 @@ fn day8(input: &str, edge_limit: usize) -> (i64, i64) {
             edges.push((squared_distance(point_a, point_b), i, j));
         }
     }
-    edges.sort_unstable_by_key(|(distance, _, _)| *distance);
+    edges.par_sort_unstable_by_key(|(distance, _, _)| *distance);
 
     // Part 1: Use only the first 1000 shortest edges.
     let mut num_circuits = num_points;
@@ -62,7 +63,6 @@ fn day8(input: &str, edge_limit: usize) -> (i64, i64) {
     let part_one = circuits
         .iter()
         .rev()
-        .filter(|&&size| size > 0)
         .take(3)
         .product::<usize>() as i64;
 
