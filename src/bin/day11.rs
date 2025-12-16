@@ -19,13 +19,13 @@ impl<'a> PathCounter<'a> {
             devices: &'a HashMap<&'a str, Vec<&'a str>>,
             node: &'a str,
             target: &'a str,
-            cache: &mut HashMap<&'a str, i64>,
+            memo: &mut HashMap<&'a str, i64>,
         ) -> i64 {
             if node == target {
                 return 1;
             }
 
-            if let Some(&cached) = cache.get(node) {
+            if let Some(&cached) = memo.get(node) {
                 return cached;
             }
 
@@ -34,12 +34,12 @@ impl<'a> PathCounter<'a> {
                 .map(|outputs| {
                     outputs
                         .iter()
-                        .map(|&next| dfs(devices, next, target, cache))
+                        .map(|&next| dfs(devices, next, target, memo))
                         .sum()
                 })
                 .unwrap_or(0);
 
-            cache.insert(node, total);
+            memo.insert(node, total);
             total
         }
 
