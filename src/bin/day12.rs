@@ -4,18 +4,6 @@ use std::array;
 
 const NUM_PRESENTS: usize = 6;
 
-struct Present {
-    blocks: usize,
-}
-
-impl Present {
-    fn from_input(input: &str) -> Self {
-        Self {
-            blocks: input.bytes().filter(|&b| b == b'#').count(),
-        }
-    }
-}
-
 struct Region {
     width: usize,
     height: usize,
@@ -23,6 +11,7 @@ struct Region {
 }
 
 impl Region {
+    #[inline(always)]
     fn from_input(input: &str) -> Self {
         let (dims, rest) = input.split_once(':').unwrap();
         let (width_str, height_str) = dims.split_once('x').unwrap();
@@ -41,33 +30,42 @@ impl Region {
             required_presents,
         }
     }
+
+    #[inline(always)]
+    fn area(&self) -> usize {
+        self.width * self.height
+    }
 }
 
 #[inline(always)]
 fn day12(input: &str) -> i64 {
     let mut sections = input.split("\n\n");
 
-    let presents: [Present; NUM_PRESENTS] =
-        array::from_fn(|_| Present::from_input(sections.next().unwrap()));
+    // Count the number of blocks in each present.
+    let presents: [usize; NUM_PRESENTS] = array::from_fn(|_| {
+        sections
+            .next()
+            .unwrap()
+            .bytes()
+            .filter(|&b| b == b'#')
+            .count()
+    });
 
-    let rest = sections.next().unwrap_or("");
-
-    let regions: Vec<Region> = rest
+    // Compare this to the optimal packing (which seems to be all you need to do).
+    sections
+        .next()
+        .unwrap_or("")
         .lines()
         .filter(|line| !line.is_empty())
         .map(Region::from_input)
-        .collect();
-
-    regions
-        .iter()
         .filter(|region| {
             region
                 .required_presents
                 .iter()
                 .zip(presents.iter())
-                .map(|(required, present)| required * present.blocks)
+                .map(|(required, present)| required * present)
                 .sum::<usize>()
-                <= region.width * region.height
+                <= region.area()
         })
         .count() as i64
 }
