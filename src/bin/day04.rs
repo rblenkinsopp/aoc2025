@@ -1,122 +1,104 @@
-use aoc2025::get_input_as_str;
-use memchr::memchr;
+use aoc2025::{UniformInputIterator, get_input_as_str};
 
 const SPACE: u8 = b'.';
 const ROLL: u8 = b'@';
 const MIN_NEIGHBOURS: u8 = 4;
 
-struct PaperRollGrid {
-    data: Vec<u8>,
-    stride: usize,
+fn parse_grid(input: &str) -> (Vec<u8>, usize, usize, usize) {
+    let mut rows = UniformInputIterator::from_bytes(input.as_bytes());
+    let width = rows.line_length();
+    let height = width;
+    let stride = width + 2;
+
+    // Copy each logical into the padded Vec, leaving a one-cell "." border.
+    let mut grid = vec![SPACE; stride * stride];
+    for (row, line) in (&mut rows).enumerate() {
+        let start = (row + 1) * stride + 1;
+        let end = start + width;
+        grid[start..end].copy_from_slice(line);
+    }
+
+    (grid, width, height, stride)
 }
 
-impl PaperRollGrid {
-    fn from_input(input: &str) -> Self {
-        let bytes = input.as_bytes();
-        let width = memchr(b'\n', bytes).unwrap_or(bytes.len());
-        let input_stride = width + 1;
-        let height = (bytes.len() + 1) / input_stride;
-        let stride = width + 2;
+#[inline(always)]
+#[rustfmt::skip]
+fn count_neighbouring_rolls(grid: &[u8], stride: usize, index: usize) -> u8 {
+    let up = index - stride;
+    let down = index + stride;
 
-        let mut data = vec![SPACE; stride * (height + 2)];
-
-        // Safety: These ranges have been checked against the input above and must be valid.
-        unsafe {
-            for r in 0..height {
-                let src = r * input_stride;
-                let src = bytes.get_unchecked(src..src + width);
-                let dst = (r + 1) * stride + 1;
-                let dst = data.get_unchecked_mut(dst..dst + width);
-                dst.copy_from_slice(src);
-            }
-        }
-
-        Self { data, stride }
-    }
-
-    #[inline(always)]
-    fn remove_accessible_rolls(&mut self) -> (usize, usize) {
-        let stride = self.stride;
-        let length = self.data.len();
-        let mut degree = vec![0u8; length];
-        let mut current: Vec<usize> = Vec::new();
-        let mut next: Vec<usize> = Vec::new();
-
-        let bytes: &[u8] = &self.data;
-        current.reserve(bytes.len() / 64);
-
-        unsafe {
-            for i in 0..length {
-                if *bytes.get_unchecked(i) != ROLL {
-                    continue;
-                }
-
-                let up = i - stride;
-                let down = i + stride;
-                let d = (*bytes.get_unchecked(up - 1) == ROLL) as u8
-                    + (*bytes.get_unchecked(up) == ROLL) as u8
-                    + (*bytes.get_unchecked(up + 1) == ROLL) as u8
-                    + (*bytes.get_unchecked(i - 1) == ROLL) as u8
-                    + (*bytes.get_unchecked(i + 1) == ROLL) as u8
-                    + (*bytes.get_unchecked(down - 1) == ROLL) as u8
-                    + (*bytes.get_unchecked(down) == ROLL) as u8
-                    + (*bytes.get_unchecked(down + 1) == ROLL) as u8;
-
-                *degree.get_unchecked_mut(i) = d;
-                if d < MIN_NEIGHBOURS {
-                    current.push(i);
-                }
-            }
-        }
-
-        let bytes: &mut [u8] = &mut self.data;
-        let mut first = 0;
-        let mut total = 0;
-
-        while !current.is_empty() {
-            if first == 0 {
-                first = current.len();
-            }
-            total += current.len();
-
-            for i in current.drain(..) {
-                unsafe {
-                    *bytes.get_unchecked_mut(i) = SPACE;
-                    let up = i - stride;
-                    let down = i + stride;
-                    let mut decrement_neighbour = |n: usize| {
-                        if *bytes.get_unchecked(n) == ROLL {
-                            let d = degree.get_unchecked_mut(n);
-                            if *d == MIN_NEIGHBOURS {
-                                next.push(n);
-                            }
-                            *d -= 1;
-                        }
-                    };
-
-                    decrement_neighbour(up - 1);
-                    decrement_neighbour(up);
-                    decrement_neighbour(up + 1);
-                    decrement_neighbour(i - 1);
-                    decrement_neighbour(i + 1);
-                    decrement_neighbour(down - 1);
-                    decrement_neighbour(down);
-                    decrement_neighbour(down + 1);
-                }
-            }
-
-            std::mem::swap(&mut current, &mut next);
-            next.clear();
-        }
-
-        (first, total)
-    }
+    let mut rolls = 0;
+    if grid[up - 1] == ROLL { rolls += 1; }
+    if grid[up]     == ROLL { rolls += 1; }
+    if grid[up + 1] == ROLL { rolls += 1; }
+    if grid[index - 1] == ROLL { rolls += 1; }
+    if grid[index + 1] == ROLL { rolls += 1; }
+    if grid[down - 1] == ROLL { rolls += 1; }
+    if grid[down]     == ROLL { rolls += 1; }
+    if grid[down + 1] == ROLL { rolls += 1; }
+    rolls
 }
 
 #[inline(always)]
 fn day4(input: &str) -> (usize, usize) {
-    let mut grid = PaperRollGrid::from_input(input);
-    grid.remove_accessible_rolls()
+    let (mut grid, width, height, stride) = parse_grid(input);
+
+    let mut degree = vec![0; grid.len()];
+    let mut current: Vec<usize> = Vec::new();
+    let mut next: Vec<usize> = Vec::new();
+
+    // Initial degree computation and frontier setup.
+    for row in 1..=height {
+        let base = row * stride + 1;
+        for col in 0..width {
+            let idx = base + col;
+            if grid[idx] != ROLL {
+                continue;
+            }
+
+            let d = count_neighbouring_rolls(&grid, stride, idx);
+            degree[idx] = d;
+            if d < MIN_NEIGHBOURS {
+                current.push(idx);
+            }
+        }
+    }
+
+    let part_one = current.len();
+    let mut part_two = 0;
+
+    while !current.is_empty() {
+        part_two += current.len();
+
+        for i in current.drain(..) {
+            grid[i] = SPACE;
+            let mut decrement_neighbour = |n: usize| {
+                if grid[n] == ROLL {
+                    let d = &mut degree[n];
+                    if *d == MIN_NEIGHBOURS {
+                        next.push(n);
+                    }
+                    *d -= 1;
+                }
+            };
+
+            let up = i - stride;
+            let down = i + stride;
+            decrement_neighbour(up - 1);
+            decrement_neighbour(up);
+            decrement_neighbour(up + 1);
+            decrement_neighbour(i - 1);
+            decrement_neighbour(i + 1);
+            decrement_neighbour(down - 1);
+            decrement_neighbour(down);
+            decrement_neighbour(down + 1);
+        }
+
+        std::mem::swap(&mut current, &mut next);
+        next.clear();
+    }
+
+    (part_one, part_two)
 }
 
 #[inline(always)]
@@ -151,5 +133,17 @@ mod tests {
         let (part1_answer, part2_answer) = day4(SAMPLE_INPUT);
         assert_eq!(part1_answer, SAMPLE_PART1_ANSWER, "Part 1 is incorrect");
         assert_eq!(part2_answer, SAMPLE_PART2_ANSWER, "Part 2 is incorrect");
+    }
+
+    #[test]
+    fn test_day4_actual() {
+        const ACTUAL_INPUT: &str = include_str!("../../data/inputs/day04.txt");
+        const ACTUAL_ANSWERS: &str = include_str!("../../data/answers/day04.txt");
+        let answers = ACTUAL_ANSWERS.split_once("\n").unwrap();
+        let answers = (
+            str::parse::<usize>(answers.0).unwrap(),
+            str::parse::<usize>(answers.1).unwrap(),
+        );
+        assert_eq!(day4(ACTUAL_INPUT), answers);
     }
 }
